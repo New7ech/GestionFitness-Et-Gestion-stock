@@ -2,134 +2,149 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Article;
-use App\Models\Categorie;
-use App\Models\Facture;
-use App\Models\Fournisseur;
-use App\Models\User;
+use App\Enums\AttendanceStatus;
+use App\Enums\ChallengeStatus;
+use App\Enums\ParticipantStatus;
+use App\Enums\PaymentMode;
+use App\Enums\PaymentType;
+use App\Models\Challenge;
+use App\Models\Paiement;
+use App\Models\Participante;
+use App\Models\Presence;
+use App\Models\Recu;
 use Carbon\Carbon;
+use Illuminate\Contracts\View\View;
 
 class AccueilController extends Controller
 {
-    public function index()
+    public function index(): View
     {
-        $now           = Carbon::now();
-        $startOfMonth  = $now->copy()->startOfMonth();
-        $endOfMonth    = $now->copy()->endOfMonth();
+        $now = Carbon::now();
+        $today = $now->toDateString();
+        $startOfMonth = $now->copy()->startOfMonth();
+        $endOfMonth = $now->copy()->endOfMonth();
 
-        // Factures
-        $nombreFactures            = Facture::query()->count();
-        $nombreFacturesPayees      = Facture::query()->where('statut_paiement', Facture::STATUS_PAYEE)->count();
-        $nombreFacturesImpayees    = Facture::query()->where('statut_paiement', Facture::STATUS_IMPAYEE)->count();
-        $nombreFacturesMoisCourant = Facture::query()->whereBetween('date_facture', [$startOfMonth, $endOfMonth])->count();
-        $montantImpayes            = Facture::query()->where('statut_paiement', Facture::STATUS_IMPAYEE)->sum('montant_ttc');
-        $montantTotal              = Facture::query()->whereBetween('date_facture', [$startOfMonth, $endOfMonth])->sum('montant_ttc');
-        $chiffreAffairesMoisCourant = Facture::query()
-            ->whereBetween('date_facture', [$startOfMonth, $endOfMonth])
-            ->where('statut_paiement', Facture::STATUS_PAYEE)
-            ->sum('montant_ttc');
+        $participantesActives = Participante::query()
+            ->where('status', ParticipantStatus::Active->value)
+            ->count();
 
-        $montantCarte   = Facture::query()->where('mode_paiement', 'carte')->sum('montant_ttc');
-        $montantCheque  = Facture::query()->where('mode_paiement', 'chèque')->sum('montant_ttc');
-        $montantEspeces = Facture::query()->where('mode_paiement', 'espèces')->sum('montant_ttc');
+        $challengesEnCours = Challenge::query()
+            ->where('status', ChallengeStatus::EnCours->value)
+            ->count();
 
-        // Articles & stock
-        $nombreArticles         = Article::query()->count();
-        $articlesEnAlerteStock  = Article::query()->where('quantite', '<=', 5)->count();
-        $articlesRecents        = Article::query()->with('categorie')->latest('updated_at')->limit(5)->get();
+        $challengesPlanifies = Challenge::query()
+            ->where('status', ChallengeStatus::Planifie->value)
+            ->count();
 
-        // Autres entités
-        $nombreFournisseurs = Fournisseur::query()->count();
-        $nombreUtilisateurs = User::query()->count();
-        $nombreCategories   = Categorie::query()->count();
+        $challengesTermines = Challenge::query()
+            ->where('status', ChallengeStatus::Termine->value)
+            ->count();
 
-        // Listes
-        $facturesImpayees = Facture::query()->where('statut_paiement', Facture::STATUS_IMPAYEE)->latest('date_facture')->get();
-        $facturesRecentes = Facture::query()->latest('date_facture')->limit(10)->get();
-        $paiementModes    = Facture::query()
-            ->selectRaw('mode_paiement, COUNT(*) as count, SUM(montant_ttc) as total')
-            ->whereBetween('date_facture', [$startOfMonth, $endOfMonth])
-            ->groupBy('mode_paiement')
-            ->get();
+        $paiementsMois = (float) Paiement::query()
+            ->where('type', PaymentType::Paiement->value)
+            ->whereBetween('payment_date', [$startOfMonth, $endOfMonth])
+            ->sum('amount');
 
-        // Graphique articles par catégorie
-        $articlesParCategorie = Article::query()
-            ->join('categories', 'articles.category_id', '=', 'categories.id')
-            ->selectRaw('categories.name as category, COUNT(*) as count')
-            ->groupBy('categories.name')
-            ->orderByDesc('count')
+        $remboursementsMois = (float) Paiement::query()
+            ->where('type', PaymentType::Remboursement->value)
+            ->whereBetween('payment_date', [$startOfMonth, $endOfMonth])
+            ->sum('amount');
+
+        $chiffreAffairesMois = $paiementsMois - $remboursementsMois;
+
+        $presencesDuJour = Presence::query()
+            ->whereDate('attendance_date', $today)
+            ->count();
+
+        $presentesDuJour = Presence::query()
+            ->whereDate('attendance_date', $today)
+            ->where('status', AttendanceStatus::Presente->value)
+            ->count();
+
+        $absentesDuJour = Presence::query()
+            ->whereDate('attendance_date', $today)
+            ->where('status', AttendanceStatus::Absente->value)
+            ->count();
+
+        $recusRecents = Recu::query()
+            ->with(['paiement.challenge.participante', 'paiement.challenge.challengeType'])
+            ->latest('issued_at')
             ->limit(5)
             ->get();
 
-        $articlesParCategorieLabels = $articlesParCategorie->pluck('category')->toArray();
-        $articlesParCategorieData   = $articlesParCategorie->pluck('count')->toArray();
+        $challengesACloturer = Challenge::query()
+            ->with(['participante', 'challengeType'])
+            ->where('status', ChallengeStatus::EnCours->value)
+            ->whereBetween('end_date', [$today, $now->copy()->addDays(7)->toDateString()])
+            ->orderBy('end_date')
+            ->limit(5)
+            ->get();
 
-        // Graphique ventes journalières (7 derniers jours)
-        $ventesJournalieres = $this->ventesJournalieres7Jours();
+        $challengesRecents = Challenge::query()
+            ->with(['participante', 'challengeType'])
+            ->whereIn('status', [ChallengeStatus::EnCours->value, ChallengeStatus::Planifie->value])
+            ->latest()
+            ->limit(6)
+            ->get();
 
-        // Graphique impayés par mois
-        $driver          = Facture::query()->getConnection()->getDriverName();
-        $monthExpression = $driver === 'sqlite'
-            ? "CAST(strftime('%m', date_facture) AS INTEGER)"
-            : 'MONTH(date_facture)';
+        $paiementsParMode = Paiement::query()
+            ->selectRaw('payment_mode, COUNT(*) as count, SUM(amount) as total')
+            ->where('type', PaymentType::Paiement->value)
+            ->whereBetween('payment_date', [$startOfMonth, $endOfMonth])
+            ->groupBy('payment_mode')
+            ->orderByDesc('total')
+            ->get()
+            ->map(fn ($mode) => [
+                'label' => PaymentMode::tryFrom((string) $mode->payment_mode)?->label() ?? (string) $mode->payment_mode,
+                'count' => (int) $mode->count,
+                'total' => (float) $mode->total,
+            ]);
 
-        $totauxImpayesParMois = Facture::query()
-            ->selectRaw($monthExpression . ' as mois, SUM(montant_ttc) as total')
-            ->whereYear('date_facture', $now->year)
-            ->where('statut_paiement', Facture::STATUS_IMPAYEE)
-            ->groupByRaw($monthExpression)
-            ->pluck('total', 'mois');
+        $challengesParType = Challenge::query()
+            ->join('challenge_types', 'challenges.challenge_type_id', '=', 'challenge_types.id')
+            ->selectRaw('challenge_types.label as label, COUNT(*) as total')
+            ->groupBy('challenge_types.label')
+            ->orderByDesc('total')
+            ->get();
 
-        $labels = [];
-        $data   = [];
-        for ($month = 1; $month <= 12; $month++) {
-            $labels[] = Carbon::create($now->year, $month, 1)->translatedFormat('M');
-            $data[]   = (float) ($totauxImpayesParMois[$month] ?? 0);
-        }
-
-        return view('accueil.index', compact(
-            'nombreFactures',
-            'montantTotal',
-            'nombreFacturesPayees',
-            'nombreFacturesImpayees',
-            'montantImpayes',
-            'nombreFacturesMoisCourant',
-            'chiffreAffairesMoisCourant',
-            'montantCarte',
-            'montantCheque',
-            'montantEspeces',
-            'nombreArticles',
-            'articlesEnAlerteStock',
-            'articlesRecents',
-            'nombreFournisseurs',
-            'nombreUtilisateurs',
-            'nombreCategories',
-            'facturesImpayees',
-            'facturesRecentes',
-            'paiementModes',
-            'articlesParCategorie',
-            'articlesParCategorieLabels',
-            'articlesParCategorieData',
-            'ventesJournalieres',
-            'labels',
-            'data'
-        ));
+        return view('accueil.index', [
+            'participantesActives' => $participantesActives,
+            'challengesEnCours' => $challengesEnCours,
+            'challengesPlanifies' => $challengesPlanifies,
+            'challengesTermines' => $challengesTermines,
+            'chiffreAffairesMois' => $chiffreAffairesMois,
+            'presencesDuJour' => $presencesDuJour,
+            'presentesDuJour' => $presentesDuJour,
+            'absentesDuJour' => $absentesDuJour,
+            'recusRecents' => $recusRecents,
+            'challengesACloturer' => $challengesACloturer,
+            'challengesRecents' => $challengesRecents,
+            'paiementsParMode' => $paiementsParMode,
+            'challengesParType' => $challengesParType,
+            'revenusJournalier' => $this->revenusJournalierSur7Jours(),
+        ]);
     }
 
-    private function ventesJournalieres7Jours(): array
+    private function revenusJournalierSur7Jours(): array
     {
-        $driver = Facture::query()->getConnection()->getDriverName();
         $labels = [];
-        $data   = [];
+        $data = [];
 
         for ($i = 6; $i >= 0; $i--) {
-            $day      = Carbon::now()->subDays($i);
+            $day = Carbon::now()->subDays($i);
             $labels[] = $day->translatedFormat('D d/m');
-            $total    = Facture::query()
-                ->whereDate('date_facture', $day->toDateString())
-                ->where('statut_paiement', Facture::STATUS_PAYEE)
-                ->sum('montant_ttc');
-            $data[] = (float) $total;
+
+            $paiements = (float) Paiement::query()
+                ->where('type', PaymentType::Paiement->value)
+                ->whereDate('payment_date', $day->toDateString())
+                ->sum('amount');
+
+            $remboursements = (float) Paiement::query()
+                ->where('type', PaymentType::Remboursement->value)
+                ->whereDate('payment_date', $day->toDateString())
+                ->sum('amount');
+
+            $data[] = $paiements - $remboursements;
         }
 
         return compact('labels', 'data');

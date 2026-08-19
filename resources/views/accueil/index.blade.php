@@ -1,284 +1,402 @@
 @extends('layouts.app')
 
-{{-- Section pour le titre de la page --}}
-@section('title', 'Tableau de Bord')
+@section('title', 'Tableau de bord')
 
-{{-- Section pour le contenu principal de la page --}}
 @section('contenus')
-
-{{-- En-tête de la page avec titre et fil d'Ariane --}}
 <div class="page-inner">
-<div class="page-header">
-    <h3 class="fw-bold mb-3">Tableau de Bord</h3>
-    <ul class="breadcrumbs mb-3">
-        <li class="nav-home">
-            <a href="{{ route('accueil') }}">
-                <i class="icon-home"></i>
-            </a>
-        </li>
-        {{-- Pas de séparateur ni d'autre item car c'est la page d'accueil --}}
-    </ul>
+    <div class="page-header">
+        <h3 class="fw-bold mb-3">Tableau de bord fitness</h3>
+        <ul class="breadcrumbs mb-3">
+            <li class="nav-home">
+                <a href="{{ route('accueil') }}">
+                    <i class="icon-home"></i>
+                </a>
+            </li>
+        </ul>
+    </div>
+
+    <div class="d-flex align-items-left align-items-md-center flex-column flex-md-row mb-4">
+        <div>
+            <h6 class="op-7 mb-1">Suivi des inscriptions, challenges, paiements et presences.</h6>
+        </div>
+        <div class="ms-md-auto py-2 py-md-0">
+            @can('create-participantes')
+                <a href="{{ route('participantes.create') }}" class="btn btn-primary btn-round me-2">
+                    <i class="fas fa-user-plus me-1"></i> Inscription
+                </a>
+            @endcan
+            @can('record-attendance')
+                <a href="{{ route('presences.create') }}" class="btn btn-label-info btn-round me-2">
+                    <i class="fas fa-calendar-check me-1"></i> Presence
+                </a>
+            @endcan
+            @can('create-payments')
+                <a href="{{ route('payments.create') }}" class="btn btn-label-success btn-round">
+                    <i class="fas fa-money-bill-wave me-1"></i> Paiement
+                </a>
+            @endcan
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-sm-6 col-md-3">
+            <div class="card card-stats card-round">
+                <div class="card-body">
+                    <div class="row align-items-center">
+                        <div class="col-icon">
+                            <div class="icon-big text-center icon-primary bubble-shadow-small">
+                                <i class="fas fa-users"></i>
+                            </div>
+                        </div>
+                        <div class="col col-stats ms-3 ms-sm-0">
+                            <div class="numbers">
+                                <p class="card-category">Participantes actives</p>
+                                <h4 class="card-title">{{ number_format($participantesActives, 0, ',', ' ') }}</h4>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-sm-6 col-md-3">
+            <div class="card card-stats card-round">
+                <div class="card-body">
+                    <div class="row align-items-center">
+                        <div class="col-icon">
+                            <div class="icon-big text-center icon-success bubble-shadow-small">
+                                <i class="fas fa-dumbbell"></i>
+                            </div>
+                        </div>
+                        <div class="col col-stats ms-3 ms-sm-0">
+                            <div class="numbers">
+                                <p class="card-category">Challenges en cours</p>
+                                <h4 class="card-title">{{ number_format($challengesEnCours, 0, ',', ' ') }}</h4>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-sm-6 col-md-3">
+            <div class="card card-stats card-round">
+                <div class="card-body">
+                    <div class="row align-items-center">
+                        <div class="col-icon">
+                            <div class="icon-big text-center icon-info bubble-shadow-small">
+                                <i class="fas fa-cash-register"></i>
+                            </div>
+                        </div>
+                        <div class="col col-stats ms-3 ms-sm-0">
+                            <div class="numbers">
+                                <p class="card-category">CA du mois</p>
+                                <h4 class="card-title">{{ number_format($chiffreAffairesMois, 0, ',', ' ') }} FCFA</h4>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-sm-6 col-md-3">
+            <div class="card card-stats card-round">
+                <div class="card-body">
+                    <div class="row align-items-center">
+                        <div class="col-icon">
+                            <div class="icon-big text-center icon-warning bubble-shadow-small">
+                                <i class="fas fa-calendar-day"></i>
+                            </div>
+                        </div>
+                        <div class="col col-stats ms-3 ms-sm-0">
+                            <div class="numbers">
+                                <p class="card-category">Presences du jour</p>
+                                <h4 class="card-title">{{ number_format($presencesDuJour, 0, ',', ' ') }}</h4>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card card-round">
+                <div class="card-header">
+                    <div class="card-title">Revenus des 7 derniers jours</div>
+                </div>
+                <div class="card-body">
+                    <div class="chart-container" style="height: 330px">
+                        <canvas id="revenusJournalierChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card card-round">
+                <div class="card-header">
+                    <div class="card-title">Challenges par type</div>
+                </div>
+                <div class="card-body">
+                    <div class="chart-container" style="height: 330px">
+                        <canvas id="challengesParTypeChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-4">
+            <div class="card card-round">
+                <div class="card-header">
+                    <div class="card-title">Etat des challenges</div>
+                </div>
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <span class="text-muted">Planifies</span>
+                        <span class="badge badge-info">{{ number_format($challengesPlanifies, 0, ',', ' ') }}</span>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <span class="text-muted">En cours</span>
+                        <span class="badge badge-success">{{ number_format($challengesEnCours, 0, ',', ' ') }}</span>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span class="text-muted">Termines</span>
+                        <span class="badge badge-secondary">{{ number_format($challengesTermines, 0, ',', ' ') }}</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card card-round">
+                <div class="card-header">
+                    <div class="card-title">Presences aujourd'hui</div>
+                </div>
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <span class="text-muted">Presentes</span>
+                        <span class="badge badge-success">{{ number_format($presentesDuJour, 0, ',', ' ') }}</span>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span class="text-muted">Absentes</span>
+                        <span class="badge badge-danger">{{ number_format($absentesDuJour, 0, ',', ' ') }}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-8">
+            <div class="card card-round">
+                <div class="card-header">
+                    <div class="card-title">Challenges a suivre</div>
+                    <div class="card-category">Challenges en cours ou planifies les plus recents.</div>
+                </div>
+                <div class="card-body p-0">
+                    @if($challengesRecents->isEmpty())
+                        <div class="text-center py-5 text-muted">Aucun challenge a afficher.</div>
+                    @else
+                        <div class="table-responsive">
+                            <table class="table align-items-center mb-0">
+                                <thead class="thead-light">
+                                    <tr>
+                                        <th>Participante</th>
+                                        <th>Type</th>
+                                        <th class="text-center">Statut</th>
+                                        <th class="text-end">Fin</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach($challengesRecents as $challenge)
+                                        <tr>
+                                            <td>
+                                                <a href="{{ route('challenges.show', $challenge) }}" class="fw-bold text-decoration-none">
+                                                    {{ $challenge->participante->full_name }}
+                                                </a>
+                                            </td>
+                                            <td>{{ $challenge->challengeType->label }}</td>
+                                            <td class="text-center">
+                                                <span class="badge badge-{{ $challenge->status->value === 'en_cours' ? 'success' : 'info' }}">
+                                                    {{ $challenge->status->label() }}
+                                                </span>
+                                            </td>
+                                            <td class="text-end">{{ $challenge->end_date?->format('d/m/Y') }}</td>
+                                        </tr>
+                                    @endforeach
+                                </tbody>
+                            </table>
+                        </div>
+                    @endif
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card card-round">
+                <div class="card-header">
+                    <div class="card-title">Paiements par mode ce mois</div>
+                </div>
+                <div class="card-body">
+                    @if($paiementsParMode->isEmpty())
+                        <div class="text-center py-4 text-muted">Aucun paiement enregistre ce mois.</div>
+                    @else
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Mode</th>
+                                        <th class="text-center">Operations</th>
+                                        <th class="text-end">Montant</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach($paiementsParMode as $mode)
+                                        <tr>
+                                            <td>{{ $mode['label'] }}</td>
+                                            <td class="text-center">{{ number_format($mode['count'], 0, ',', ' ') }}</td>
+                                            <td class="text-end fw-bold">{{ number_format($mode['total'], 0, ',', ' ') }} FCFA</td>
+                                        </tr>
+                                    @endforeach
+                                </tbody>
+                            </table>
+                        </div>
+                    @endif
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <div class="card card-round">
+                <div class="card-header">
+                    <div class="card-title">Recus recents</div>
+                </div>
+                <div class="card-body p-0">
+                    @if($recusRecents->isEmpty())
+                        <div class="text-center py-5 text-muted">Aucun recu emis pour le moment.</div>
+                    @else
+                        <div class="table-responsive">
+                            <table class="table align-items-center mb-0">
+                                <thead class="thead-light">
+                                    <tr>
+                                        <th>Numero</th>
+                                        <th>Participante</th>
+                                        <th class="text-end">Montant</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach($recusRecents as $recu)
+                                        <tr>
+                                            <td>
+                                                <a href="{{ route('recus.show', $recu) }}" class="fw-bold text-decoration-none">
+                                                    {{ $recu->receipt_number }}
+                                                </a>
+                                            </td>
+                                            <td>{{ $recu->participante_full_name }}</td>
+                                            <td class="text-end">{{ number_format((float) $recu->amount_paid, 0, ',', ' ') }} FCFA</td>
+                                        </tr>
+                                    @endforeach
+                                </tbody>
+                            </table>
+                        </div>
+                    @endif
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @if($challengesACloturer->isNotEmpty())
+        <div class="row">
+            <div class="col-md-12">
+                <div class="card card-round">
+                    <div class="card-header">
+                        <div class="card-title">Challenges a cloturer sous 7 jours</div>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            @foreach($challengesACloturer as $challenge)
+                                <div class="col-md-6 col-lg-4">
+                                    <div class="d-flex align-items-center border rounded p-3 mb-3">
+                                        <div class="avatar avatar-sm me-3">
+                                            <span class="avatar-title rounded-circle bg-primary">
+                                                {{ mb_substr($challenge->participante->first_name, 0, 1) }}{{ mb_substr($challenge->participante->last_name, 0, 1) }}
+                                            </span>
+                                        </div>
+                                        <div class="flex-1">
+                                            <a href="{{ route('challenges.show', $challenge) }}" class="fw-bold text-decoration-none">
+                                                {{ $challenge->participante->full_name }}
+                                            </a>
+                                            <div class="text-muted small">{{ $challenge->challengeType->label }} - fin {{ $challenge->end_date?->format('d/m/Y') }}</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            @endforeach
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    @endif
 </div>
-
-{{-- Section des cartes de statistiques rapides --}}
-{{-- Ces variables sont supposées être passées par AccueilController --}}
-<div class="row">
-    {{-- Carte Fournisseurs --}}
-    <div class="col-sm-6 col-md-3">
-        <div class="card card-stats card-round">
-            <div class="card-body">
-                <div class="row align-items-center">
-                    <div class="col-icon">
-                        <div class="icon-big text-center icon-primary bubble-shadow-small">
-                            <i class="fas fa-truck-loading"></i>
-                        </div>
-                    </div>
-                    <div class="col col-stats ms-3 ms-sm-0">
-                        <div class="numbers">
-                            <p class="card-category">Fournisseurs</p>
-                            <h4 class="card-title">{{ $nombreFournisseurs ?? 0 }}</h4>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    {{-- Carte Factures (par exemple, total des factures ou factures du mois) --}}
-    <div class="col-sm-6 col-md-3">
-        <div class="card card-stats card-round">
-            <div class="card-body">
-                <div class="row align-items-center">
-                    <div class="col-icon">
-                        <div class="icon-big text-center icon-info bubble-shadow-small">
-                            <i class="fas fa-file-invoice-dollar"></i>
-                        </div>
-                    </div>
-                    <div class="col col-stats ms-3 ms-sm-0">
-                        <div class="numbers">
-                            <p class="card-category">Total Factures</p>
-                            <h4 class="card-title">{{ $nombreFactures ?? 0 }}</h4>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    {{-- Carte Chiffre d'Affaires (par exemple, du mois en cours) --}}
-    <div class="col-sm-6 col-md-3">
-        <div class="card card-stats card-round">
-            <div class="card-body">
-                <div class="row align-items-center">
-                    <div class="col-icon">
-                        <div class="icon-big text-center icon-success bubble-shadow-small">
-                            <i class="fas fa-cash-register"></i>
-                        </div>
-                    </div>
-                    <div class="col col-stats ms-3 ms-sm-0">
-                        <div class="numbers">
-                            <p class="card-category">CA (Mois en cours)</p>
-                            <h4 class="card-title">{{ number_format($chiffreAffairesMoisCourant ?? 0, 0, ',', ' ') }} FCFA</h4>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    {{-- Carte Articles en Alerte Stock --}}
-    <div class="col-sm-6 col-md-3">
-        <div class="card card-stats card-round">
-            <div class="card-body">
-                <div class="row align-items-center">
-                    <div class="col-icon">
-                        <div class="icon-big text-center icon-danger bubble-shadow-small"> {{-- icon-danger pour alerte --}}
-                            <i class="fas fa-exclamation-triangle"></i>
-                        </div>
-                    </div>
-                    <div class="col col-stats ms-3 ms-sm-0">
-                        <div class="numbers">
-                            <p class="card-category">Articles Stock Faible</p>
-                            <h4 class="card-title">{{ $articlesEnAlerteStock ?? 0 }}</h4>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-
-{{-- Section des graphiques --}}
-<div class="row">
-    {{-- Graphique des Ventes (par exemple, sur les 7 derniers jours ou mensuelles) --}}
-    <div class="col-md-8">
-        <div class="card card-round">
-            <div class="card-header">
-                <div class="card-head-row">
-                    <div class="card-title">Tendances des Ventes (7 derniers jours)</div>
-                </div>
-            </div>
-            <div class="card-body">
-                <div class="chart-container" style="height: 350px">
-                    <canvas id="ventesJournalieresChart"></canvas>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    {{-- Graphique des Articles par Catégorie (Donut) --}}
-    <div class="col-md-4">
-        <div class="card card-round">
-            <div class="card-header">
-                <div class="card-title">Répartition des Articles par Catégorie</div>
-            </div>
-            <div class="card-body">
-                 <div class="chart-container" style="height: 350px">
-                    <canvas id="articlesParCategorieChart"></canvas>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-
-{{-- Section pour d'autres informations, par exemple, dernières activités ou articles à stock faible --}}
-<div class="row">
-    <div class="col-md-12">
-        <div class="card card-round">
-            <div class="card-header">
-                <h4 class="card-title">Articles Récemment Modifiés ou Ajoutés (Top 5)</h4>
-                 <div class="card-category">
-                    Suivi des dernières modifications dans le stock.
-                  </div>
-            </div>
-            <div class="card-body">
-                @if(isset($articlesRecents) && $articlesRecents->isNotEmpty())
-                    <div class="table-responsive">
-                        <table class="table table-striped table-hover">
-                            <thead class="table-light">
-                                <tr>
-                                    <th>Nom de l'article</th>
-                                    <th>Catégorie</th>
-                                    <th class="text-end">Quantité</th>
-                                    <th class="text-center">Dernière MàJ</th>
-                                    <th class="text-center">Action</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                @foreach($articlesRecents as $article)
-                                <tr>
-                                    <td>{{ $article->name }}</td>
-                                    <td>{{ $article->categorie->name ?? 'N/A' }}</td>
-                                    <td class="text-end fw-bold {{ $article->quantite <= ($seuilStockFaible ?? 5) ? 'text-danger' : '' }}">{{ $article->quantite }}</td>
-                                    <td class="text-center">{{ $article->updated_at->diffForHumans() }}</td>
-                                    <td class="text-center">
-                                        <a href="{{ route('articles.show', $article->id) }}" class="btn btn-info btn-sm" data-bs-toggle="tooltip" title="Voir Détails">
-                                            <i class="fa fa-eye"></i>
-                                        </a>
-                                    </td>
-                                </tr>
-                                @endforeach
-                            </tbody>
-                        </table>
-                    </div>
-                @else
-                    <p class="text-center text-muted">Aucune activité récente sur les articles.</p>
-                @endif
-            </div>
-        </div>
-    </div>
-</div>
-</div>
-
 @endsection
 
 @push('scripts')
-{{-- Chart.js est déjà inclus globalement via layouts.app.blade.php --}}
-{{-- S'il ne l'est pas, décommentez la ligne ci-dessous ou ajoutez-la au layout principal --}}
-{{-- <script src="{{ asset('assets/js/plugin/chart.js/chart.min.js') }}"></script> --}}
-
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    // Fonction pour générer des couleurs pour les graphiques
-    function generateColors(numColors) {
-        const baseColors = ["#5793ff", "#ff6384", "#36a2eb", "#ffce56", "#4bc0c0", "#9966ff", "#ff9f40", "#E7E9ED"];
-        let colors = [];
-        for (let i = 0; i < numColors; i++) {
-            colors.push(baseColors[i % baseColors.length]);
-        }
-        return colors;
-    }
+document.addEventListener('DOMContentLoaded', function () {
+    const colors = ['#177dff', '#31ce36', '#f3545d', '#ffad46', '#48abf7', '#6861ce'];
 
-    // Graphique des Ventes Journalières (Line Chart)
-    // Vérifie si les variables Blade existent et sont des objets avant de les utiliser
-    const ventesJournalieresCtx = document.getElementById('ventesJournalieresChart');
-    const ventesJournalieresLabels = typeof @json($ventesJournalieres['labels'] ?? null) === 'object' ? @json($ventesJournalieres['labels'] ?? []) : [];
-    const ventesJournalieresData = typeof @json($ventesJournalieres['data'] ?? null) === 'object' ? @json($ventesJournalieres['data'] ?? []) : [];
-
-    if (ventesJournalieresCtx && ventesJournalieresLabels.length > 0 && ventesJournalieresData.length > 0) {
-        new Chart(ventesJournalieresCtx, {
+    const revenusCanvas = document.getElementById('revenusJournalierChart');
+    if (revenusCanvas) {
+        new Chart(revenusCanvas, {
             type: 'line',
             data: {
-                labels: ventesJournalieresLabels,
+                labels: @json($revenusJournalier['labels']),
                 datasets: [{
-                    label: 'Ventes (FCFA)',
-                    data: ventesJournalieresData,
-                    borderColor: '#177dff', // Couleur primaire KaiAdmin
-                    backgroundColor: 'rgba(23, 125, 255, 0.2)',
+                    label: 'Revenus nets',
+                    data: @json($revenusJournalier['data']),
+                    borderColor: '#177dff',
+                    backgroundColor: 'rgba(23, 125, 255, 0.16)',
                     fill: true,
-                    tension: 0.3,
-                    pointBackgroundColor: '#177dff',
+                    tension: 0.35,
                     pointRadius: 4
                 }]
             },
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
-                plugins: {
-                    legend: { display: true, position: 'top' },
-                    tooltip: {
-                        callbacks: {
-                            label: function(context) {
-                                return context.dataset.label + ': ' + context.parsed.y.toLocaleString('fr-FR') + ' FCFA';
-                            }
-                        }
-                    }
-                },
                 scales: {
                     y: {
                         beginAtZero: true,
                         ticks: {
-                            callback: function(value) { return value.toLocaleString('fr-FR') + ' FCFA'; }
+                            callback: value => new Intl.NumberFormat('fr-FR').format(value) + ' FCFA'
                         }
                     },
-                    x: {
-                        grid: { display: false }
+                    x: { grid: { display: false } }
+                },
+                plugins: {
+                    tooltip: {
+                        callbacks: {
+                            label: context => new Intl.NumberFormat('fr-FR').format(context.parsed.y) + ' FCFA'
+                        }
                     }
                 }
             }
         });
-    } else if(ventesJournalieresCtx) {
-        const ctx = ventesJournalieresCtx.getContext('2d');
-        ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.font = '16px Public Sans';
-        ctx.fillText('Pas de données de ventes récentes.', ventesJournalieresCtx.width / 2, ventesJournalieresCtx.height / 2);
     }
 
-
-    // Graphique Articles par Catégorie (Doughnut Chart)
-    const articlesParCategorieCtx = document.getElementById('articlesParCategorieChart');
-    const articlesLabels = typeof @json($articlesParCategorieLabels ?? null) === 'object' ? @json($articlesParCategorieLabels ?? []) : [];
-    const articlesData = typeof @json($articlesParCategorieData ?? null) === 'object' ? @json($articlesParCategorieData ?? []) : [];
-
-    if (articlesParCategorieCtx && articlesLabels.length > 0 && articlesData.length > 0) {
-         new Chart(articlesParCategorieCtx, {
+    const challengesCanvas = document.getElementById('challengesParTypeChart');
+    const challengeLabels = @json($challengesParType->pluck('label'));
+    const challengeData = @json($challengesParType->pluck('total'));
+    if (challengesCanvas && challengeLabels.length > 0) {
+        new Chart(challengesCanvas, {
             type: 'doughnut',
             data: {
-                labels: articlesLabels,
+                labels: challengeLabels,
                 datasets: [{
-                    label: 'Articles',
-                    data: articlesData,
-                    backgroundColor: generateColors(articlesLabels.length),
-                    hoverOffset: 6,
+                    data: challengeData,
+                    backgroundColor: colors,
                     borderWidth: 2
                 }]
             },
@@ -286,36 +404,11 @@ document.addEventListener('DOMContentLoaded', function() {
                 responsive: true,
                 maintainAspectRatio: false,
                 plugins: {
-                    legend: {
-                        position: 'bottom',
-                         labels: { padding: 15, boxWidth: 12, font: {size: 10} }
-                    },
-                    tooltip: {
-                         callbacks: {
-                            label: function(context) {
-                                let label = context.label || '';
-                                if (label) { label += ': '; }
-                                if (context.parsed !== null) {
-                                    label += context.parsed + ' article(s)';
-                                }
-                                return label;
-                            }
-                        }
-                    }
+                    legend: { position: 'bottom' }
                 }
             }
         });
-    } else if (articlesParCategorieCtx) {
-        const ctx = articlesParCategorieCtx.getContext('2d');
-        ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.font = '16px Public Sans';
-        ctx.fillText('Pas de données de catégorie.', articlesParCategorieCtx.width / 2, articlesParCategorieCtx.height / 2);
     }
-
-    // Initialisation des tooltips Bootstrap
-    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
-    var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
-        return new bootstrap.Tooltip(tooltipTriggerEl)
-    })
 });
 </script>
 @endpush
