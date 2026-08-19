@@ -6,7 +6,7 @@ Ce fichier s'applique à tout agent de codage IA (Codex, Claude Code, ou autre) 
 
 ## 1. Contexte du projet
 
-Application de gestion pour un centre fitness spécialisé dans la **perte de poids** et la **rééducation de la diastasie**. Le dépôt a été créé à l'origine comme un ERP de gestion de stock/facturation (nom historique : « e-Gstion »). Ce module de stock/facturation (Articles, Catégories, Emplacements, Fournisseurs, Factures) **reste actif et n'est pas lié** au domaine fitness — les deux cohabitent dans la même application.
+Application de gestion pour un centre fitness spécialisé dans la **perte de poids** et la **rééducation de la diastasie**. Le périmètre fonctionnel est désormais exclusivement fitness ; l'ancien périmètre historique a été supprimé du code, des routes, des vues et des migrations.
 
 Le domaine fitness gère le cycle : inscription → paiement → reçu → challenge (perte de poids ou diastasie) → présences → mesures → photos/vidéos → progression → bilan final.
 
@@ -27,10 +27,10 @@ Le domaine fitness gère le cycle : inscription → paiement → reçu → chall
 ## 3. Architecture
 
 - MVC Laravel classique, 100 % rendu serveur (Blade). Pas d'API (`routes/api.php` n'existe pas) sauf besoin explicite futur.
-- Un `Service` dédié par domaine métier complexe (`FactureService` existant, `PaymentService`/`RecuService`/`DashboardService` pour le domaine fitness) — pas de logique métier lourde directement dans les contrôleurs.
+- Un `Service` dédié par domaine métier complexe (`PaymentService`, `RecuService`, `MesureService`) — pas de logique métier lourde directement dans les contrôleurs.
 - Un `FormRequest` par action de formulaire, avec `messages()` en français.
 - Une `Policy` Laravel par modèle protégé, vérifiée via `$this->authorize()` — **jamais** de vérification de permission uniquement dans la vue.
-- Modèles français sans accents dans le code (`Categorie`, `Recu`, `Presence`), comme la convention déjà en place.
+- Modèles français sans accents dans le code (`Participante`, `Recu`, `Presence`), comme la convention déjà en place.
 
 ---
 
@@ -40,7 +40,7 @@ Le domaine fitness gère le cycle : inscription → paiement → reçu → chall
 - Recherche/filtres : `->when($request->filled('champ'), fn ($q) => $q->where(...))`.
 - Flash messages : `->with('success', '...')` / `->with('error', '...')`.
 - Statuts/types/modes fixes : **enums PHP natifs backés** (`enum X: string { case A = 'a'; }`), castés sur le modèle (`'status' => ParticipantStatus::class]`), valeurs de base de données en ASCII sans accent, libellés accentués uniquement via une méthode `label()` sur l'enum.
-- Avant une suppression définitive, vérifier les dépendances (comme `CategorieController` le fait déjà) ou préférer un `SoftDelete` pour toute donnée historique/financière.
+- Avant une suppression définitive, vérifier les dépendances ou préférer un `SoftDelete` pour toute donnée historique/financière.
 - Style de code : `./vendor/bin/pint` (préréglage par défaut, pas de `pint.json` custom actuellement — ne pas en ajouter un sans le justifier).
 
 ---
@@ -48,7 +48,7 @@ Le domaine fitness gère le cycle : inscription → paiement → reçu → chall
 ## 5. Règles de base de données
 
 - Toute nouvelle table historique (paiements, reçus, mesures, présences, médias, commentaires, challenges, participantes) utilise `SoftDeletes`.
-- Toute colonne `created_by`/`updated_by`/`recorded_by`/`uploaded_by` : `foreignId(...)->nullable()->constrained('users')->onDelete('set null')` — **toujours avec contrainte FK réelle** (le dépôt contient une incohérence existante entre `articles` et `categories` sur ce point ; ne pas la reproduire).
+- Toute colonne `created_by`/`updated_by`/`recorded_by`/`uploaded_by` : `foreignId(...)->nullable()->constrained('users')->onDelete('set null')` — **toujours avec contrainte FK réelle**.
 - Contraintes d'unicité au niveau **base de données** quand la règle métier l'exige (ex. `UNIQUE(challenge_id, attendance_date)` sur les présences) — ne pas se reposer uniquement sur la validation applicative pour ce type de règle.
 - Index sur toute colonne de filtre/tri fréquent (statuts, dates de fin, clés étrangères de recherche).
 - Ne jamais stocker de colonne dénormalisée redondante sans raison documentée — exception assumée et documentée : les champs "snapshot" d'un reçu déjà émis (figés intentionnellement, cf. section 10).
@@ -79,7 +79,7 @@ Le domaine fitness gère le cycle : inscription → paiement → reçu → chall
 ## 8. Règles de permissions
 
 - Rôles existants (`super_admin`, `manager`, `employee`, `guest`) à conserver intacts. Nouveau rôle fitness : `coach`.
-- Convention de nommage des permissions : `{verbe}-{ressource}` en kebab-case, comme l'existant (`show-articles`, `edit-factures`).
+- Convention de nommage des permissions : `{verbe}-{ressource}` en kebab-case, comme l'existant (`show-participantes`, `edit-payments`).
 - Chaque nouvelle ressource métier a sa `Policy`, enregistrée et appelée via `$this->authorize()` dans chaque méthode de contrôleur concernée.
 - Les données de santé sensibles (`health_notes`, `has_cesarean`) sont protégées par une permission dédiée (`view-participante-health-data`), distincte de la permission générale de consultation d'une participante.
 - Le menu latéral (`layouts/sidebar.blade.php`) doit conditionner l'affichage de toute nouvelle entrée avec `@can(...)` — l'existant ne le fait pour aucune entrée ; ne pas reproduire cette lacune sur les nouvelles entrées.
@@ -88,9 +88,9 @@ Le domaine fitness gère le cycle : inscription → paiement → reçu → chall
 
 ## 9. Règles concernant les migrations
 
-- **Aucune migration destructive** sur les tables existantes (`users`, `articles`, `categories`, `emplacements`, `fournisseurs`, `factures`) sans justification explicite et validation préalable.
+- **Aucune migration destructive** sur les tables existantes (`users`, tables Spatie, tables fitness) sans justification explicite et validation préalable.
 - Toute nouvelle colonne sur une table existante est `nullable` ou avec valeur par défaut, pour ne jamais casser les lignes déjà présentes.
-- Les nouvelles tables du domaine fitness sont **additives** : aucune donnée fitness n'existe encore, donc aucune stratégie de migration de données n'est nécessaire pour ce domaine — uniquement pour ne pas perturber les données existantes (Users/Roles/Permissions/Articles/Factures).
+- Les évolutions du domaine fitness sont **additives** par défaut : ne pas perturber les données existantes (Users/Roles/Permissions/Participantes/Challenges/Paiements/Reçus/Mesures/Présences/Médias/Commentaires).
 - Toujours tester une migration avec `php artisan migrate:fresh` en local/CI avant de la considérer terminée.
 - Ne jamais modifier une migration déjà exécutée en production/partagée — créer une nouvelle migration corrective à la place.
 
@@ -99,7 +99,7 @@ Le domaine fitness gère le cycle : inscription → paiement → reçu → chall
 ## 10. Règles de tests
 
 - PHPUnit (pas Pest), attributs `#[Test]`, `RefreshDatabase`.
-- Authentifier explicitement l'utilisateur de test avec le bon rôle/permission avant d'appeler une route protégée (cf. `ArticleManagementTest` comme référence correcte — **pas** `FactureManagementTest`/`PermissionWorkflowTest`, qui contiennent actuellement ce défaut et doivent être corrigés en priorité).
+- Authentifier explicitement l'utilisateur de test avec le bon rôle/permission avant d'appeler une route protégée (cf. `ParticipanteManagementTest` et `ChallengeManagementTest` comme références).
 - `Storage::fake('participant_media')` (ou disque concerné) pour tout test impliquant un upload.
 - Toute nouvelle fonctionnalité doit avoir : un test de création, un test de validation (cas d'échec), un test de permission (403 pour un rôle non autorisé), et pour les calculs (bilan, solde de paiement) un test avec des valeurs connues vérifiées à la main.
 - La suite complète doit rester **verte** avant de clore une phase de travail — ne jamais empiler du code sur une base de tests rouge.
@@ -151,13 +151,13 @@ docker compose exec app composer install
 
 | Fichier/dossier | Rôle |
 |---|---|
-| `app/Services/FactureService.php` | Modèle de référence pour la logique métier transactionnelle (à imiter pour `PaymentService`/`RecuService`) |
+| `app/Services/PaymentService.php` | Référence pour la logique transactionnelle des paiements et le recalcul du statut de paiement |
+| `app/Services/RecuService.php` | Référence pour la génération des reçus fitness et les snapshots financiers |
 | `app/Http/Controllers/MediaController.php` | Exemple de garde anti-traversal — **ne pas réutiliser tel quel** pour les médias participantes (absence d'authentification) |
 | `database/seeders/ImproveRolesAndPermissionsSeeder.php` | Seeder des rôles/permissions — à étendre, jamais à remplacer |
 | `resources/views/layouts/sidebar.blade.php` | Menu latéral — ajouter les nouvelles entrées en les conditionnant par permission |
-| `resources/views/factures/pdf.blade.php` | Gabarit de référence pour tout nouveau PDF (reçu, bilan) |
-| `tests/Feature/ArticleManagementTest.php` | Bon exemple de test authentifié — référence à suivre |
-| `tests/Feature/FactureManagementTest.php`, `PermissionWorkflowTest.php` | Contiennent le défaut d'authentification manquante à corriger en priorité |
+| `resources/views/recus/pdf.blade.php` | Gabarit de référence pour les PDF fitness |
+| `tests/Feature/ParticipanteManagementTest.php`, `ChallengeManagementTest.php` | Exemples de tests authentifiés avec rôles/permissions |
 | `docker-compose.yml`, `dockerfile`, `docker-entrypoint.sh` | Fonctionnement local — ne pas modifier sans nécessité |
 | `.env` (versionné actuellement) | À retirer du suivi Git (`git rm --cached .env`) sans supprimer le fichier local |
 
