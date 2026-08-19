@@ -60,7 +60,7 @@ class StorePermissionRequest extends FormRequest
             'name.string' => 'Le nom de la permission doit etre une chaine de caracteres.',
             'name.max' => 'Le nom de la permission ne doit pas depasser 255 caracteres.',
             'name.unique' => 'Ce nom de permission existe deja pour ce guard.',
-            'name.regex' => 'Utilisez uniquement lettres minuscules, chiffres, points et tirets (ex: articles.read).',
+            'name.regex' => 'Utilisez uniquement lettres minuscules, chiffres, points et tirets (ex: users.read).',
         ];
     }
 }

@@ -20,12 +20,7 @@
                 @foreach($recentNotifications as $notification)
                     <a href="{{ route('notifications.show', $notification->id) }}" class="dropdown-item">
                         <div class="media">
-                            {{-- Example: Icon for stock low notification --}}
-                            @if(isset($notification->data['article_id']))
-                                <i class="fas fa-boxes mr-2 mt-1"></i>
-                            @else
-                                <i class="fas fa-info-circle mr-2 mt-1"></i> {{-- Default icon --}}
-                            @endif
+                            <i class="fas fa-info-circle mr-2 mt-1"></i>
                             <div class="media-body">
                                 <h3 class="dropdown-item-title" style="font-size: 0.9rem; white-space: normal;">
                                     {{ Str::limit($notification->data['message'], 60) }}

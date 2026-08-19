@@ -37,43 +37,6 @@ class ImproveRolesAndPermissionsSeeder extends Seeder
                 'manage-user-roles',
                 'manage-user-permissions',
             ],
-            'Articles' => [
-                'show-articles',
-                'create-articles',
-                'edit-articles',
-                'delete-articles',
-                'manage-articles-stock',
-                'publish-articles',
-            ],
-            'Fournisseurs' => [
-                'show-fournisseurs',
-                'create-fournisseurs',
-                'edit-fournisseurs',
-                'delete-fournisseurs',
-                'validate-fournisseurs',
-            ],
-            'Categories' => [
-                'show-categories',
-                'create-categories',
-                'edit-categories',
-                'delete-categories',
-                'organize-categories',
-            ],
-            'Emplacements' => [
-                'show-emplacements',
-                'create-emplacements',
-                'edit-emplacements',
-                'delete-emplacements',
-                'manage-emplacements-stock',
-            ],
-            'Factures' => [
-                'show-factures',
-                'create-factures',
-                'edit-factures',
-                'delete-factures',
-                'validate-factures',
-                'manage-facture-payments',
-            ],
             'Roles et Permissions' => [
                 'show-roles',
                 'create-roles',
@@ -140,25 +103,11 @@ class ImproveRolesAndPermissionsSeeder extends Seeder
             'super_admin' => array_keys($permissionsByCategory),
             'manager' => [
                 'Utilisateurs',
-                'Articles',
-                'Fournisseurs',
-                'Categories',
-                'Emplacements',
-                'Factures',
                 'Rapports',
                 'Fitness',
             ],
-            'employee' => [
-                'Articles',
-                'Fournisseurs',
-                'Categories',
-                'Emplacements',
-            ],
-            'guest' => [
-                'Articles',
-                'Fournisseurs',
-                'Categories',
-            ],
+            'employee' => [],
+            'guest' => [],
         ];
 
         foreach ($roleAssignments as $roleName => $categories) {

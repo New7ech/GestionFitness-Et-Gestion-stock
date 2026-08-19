@@ -73,7 +73,7 @@ class PermissionWorkflowTest extends TestCase
         $this->authenticateAdmin();
 
         $permission = Permission::query()->create([
-            'name' => 'articles.read',
+            'name' => 'users.read',
             'guard_name' => 'web',
         ]);
 
@@ -85,7 +85,7 @@ class PermissionWorkflowTest extends TestCase
 
         $this->assertDatabaseHas('permissions', [
             'id' => $permission->id,
-            'name' => 'articles.read',
+            'name' => 'users.read',
             'guard_name' => 'web',
         ]);
     }

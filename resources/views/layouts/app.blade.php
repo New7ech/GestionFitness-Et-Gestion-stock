@@ -3,7 +3,7 @@
   <head>
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     <meta charset="UTF-8" />
-    <title>{{ config('app.name', 'Gestion de Stock et Facturation') }} - @yield('title', 'Tableau de bord')</title>
+    <title>{{ config('app.name', 'Gestion Fitness') }} - @yield('title', 'Tableau de bord')</title>
     <meta content="width=device-width, initial-scale=1.0, shrink-to-fit=no" name="viewport" />
     <meta name="csrf-token" content="{{ csrf_token() }}" />
     <link rel="icon" href="{{ asset('assets/img/kaiadmin/favicon.ico') }}" type="image/x-icon" />
@@ -25,7 +25,6 @@
     <link rel="stylesheet" href="{{ asset('assets/css/bootstrap.min.css') }}" />
     <link rel="stylesheet" href="{{ asset('assets/css/plugins.min.css') }}" />
     <link rel="stylesheet" href="{{ asset('assets/css/kaiadmin.min.css') }}" />
-    <link rel="stylesheet" href="{{ asset('css/article-images.css') }}" />
     <link rel="stylesheet" href="{{ asset('css/dashboard-enhanced.css') }}" />
     <link rel="stylesheet" href="{{ asset('css/page-header-fix.css') }}" />
 

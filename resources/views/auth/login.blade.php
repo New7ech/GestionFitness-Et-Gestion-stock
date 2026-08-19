@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, shrink-to-fit=no" />
-    <title>Connexion — {{ config('app.name', 'Gestion de Stock') }}</title>
+    <title>Connexion — {{ config('app.name', 'Gestion Fitness') }}</title>
     <link rel="icon" href="{{ asset('assets/img/kaiadmin/favicon.ico') }}" type="image/x-icon" />
     <link rel="stylesheet" href="{{ asset('assets/css/bootstrap.min.css') }}" />
     <link rel="stylesheet" href="{{ asset('assets/css/plugins.min.css') }}" />
@@ -26,7 +26,7 @@
 <div class="login-card">
     <div class="login-logo">
         <img src="{{ asset('assets/img/kaiadmin/logo.svg') }}" alt="Logo" onerror="this.style.display='none'" />
-        <h3>{{ config('app.name', 'Gestion de Stock') }}</h3>
+        <h3>{{ config('app.name', 'Gestion Fitness') }}</h3>
         <p class="text-muted small mb-0">Connectez-vous à votre espace</p>
     </div>
 
@@ -101,7 +101,7 @@
     </form>
 
     <p class="text-center text-muted small mt-4 mb-0">
-        &copy; {{ date('Y') }} {{ config('app.name', 'Gestion de Stock') }}
+        &copy; {{ date('Y') }} {{ config('app.name', 'Gestion Fitness') }}
     </p>
 </div>
 

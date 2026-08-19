@@ -61,10 +61,10 @@
                             required
                             pattern="[a-z0-9]+([.-][a-z0-9]+)*"
                             value="{{ old('name', $permission->name) }}"
-                            placeholder="ex: articles.read"
+                            placeholder="ex: users.read"
                         >
                         <small class="form-text text-muted">
-                            Format recommande: `module.action` (ex: `articles.read`, `users.delete`).
+                            Format recommande: `module.action` (ex: `users.read`, `users.delete`).
                             Espaces, underscores et accents sont normalises automatiquement.
                         </small>
                         @error('name') <div class="invalid-feedback">{{ $message }}</div> @enderror
