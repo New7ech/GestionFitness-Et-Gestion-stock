@@ -78,7 +78,7 @@ class PermissionWorkflowTest extends TestCase
         ]);
 
         $response = $this->put(route('permissions.update', $permission), [
-            'name' => '  ARTICLES.READ  ',
+            'name' => '  USERS.READ  ',
         ]);
 
         $response->assertRedirect(route('permissions.index'));
