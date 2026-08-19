@@ -94,11 +94,17 @@ class AccueilController extends Controller
             ->groupBy('payment_mode')
             ->orderByDesc('total')
             ->get()
-            ->map(fn ($mode) => [
-                'label' => PaymentMode::tryFrom((string) $mode->payment_mode)?->label() ?? (string) $mode->payment_mode,
-                'count' => (int) $mode->count,
-                'total' => (float) $mode->total,
-            ]);
+            ->map(function ($mode): array {
+                $paymentMode = $mode->payment_mode instanceof PaymentMode
+                    ? $mode->payment_mode
+                    : PaymentMode::tryFrom((string) $mode->payment_mode);
+
+                return [
+                    'label' => $paymentMode?->label() ?? (string) ($mode->getRawOriginal('payment_mode') ?? ''),
+                    'count' => (int) $mode->count,
+                    'total' => (float) $mode->total,
+                ];
+            });
 
         $challengesParType = Challenge::query()
             ->join('challenge_types', 'challenges.challenge_type_id', '=', 'challenge_types.id')
