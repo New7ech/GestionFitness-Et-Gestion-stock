@@ -28,7 +28,7 @@ class ImproveRolesAndPermissionsSeeder extends Seeder
             );
         }
 
-        $permissionsByCategory = [
+        $permissionsByGroup = [
             'Utilisateurs' => [
                 'show-users',
                 'create-users',
@@ -90,7 +90,7 @@ class ImproveRolesAndPermissionsSeeder extends Seeder
             ],
         ];
 
-        foreach ($permissionsByCategory as $permissions) {
+        foreach ($permissionsByGroup as $permissions) {
             foreach ($permissions as $permission) {
                 Permission::firstOrCreate(
                     ['name' => $permission, 'guard_name' => 'web'],
@@ -100,7 +100,7 @@ class ImproveRolesAndPermissionsSeeder extends Seeder
         }
 
         $roleAssignments = [
-            'super_admin' => array_keys($permissionsByCategory),
+            'super_admin' => array_keys($permissionsByGroup),
             'manager' => [
                 'Utilisateurs',
                 'Rapports',
@@ -110,7 +110,7 @@ class ImproveRolesAndPermissionsSeeder extends Seeder
             'guest' => [],
         ];
 
-        foreach ($roleAssignments as $roleName => $categories) {
+        foreach ($roleAssignments as $roleName => $groups) {
             $role = Role::where('name', $roleName)->where('guard_name', 'web')->first();
 
             if (! $role) {
@@ -119,8 +119,8 @@ class ImproveRolesAndPermissionsSeeder extends Seeder
 
             $permissions = [];
 
-            foreach ($categories as $category) {
-                $permissions = array_merge($permissions, $permissionsByCategory[$category]);
+            foreach ($groups as $group) {
+                $permissions = array_merge($permissions, $permissionsByGroup[$group]);
             }
 
             $role->syncPermissions($permissions);
@@ -145,7 +145,7 @@ class ImproveRolesAndPermissionsSeeder extends Seeder
         app(PermissionRegistrar::class)->forgetCachedPermissions();
 
         $this->command->info('Roles et permissions ameliores avec succes!');
-        $this->command->info('Structure des permissions creee par categorie');
+        $this->command->info('Structure des permissions creee par groupe');
         $this->command->info('Assignation hierarchique des permissions configuree');
     }
 }
