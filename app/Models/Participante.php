@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -58,9 +59,30 @@ class Participante extends Model
         );
     }
 
-    public function challenges(): HasMany
+    public function inscriptions(): HasMany
     {
-        return $this->hasMany(Challenge::class);
+        return $this->hasMany(Inscription::class);
+    }
+
+    public function challenges(): BelongsToMany
+    {
+        return $this->belongsToMany(Challenge::class, 'inscriptions')
+            ->withPivot([
+                'id',
+                'status',
+                'goal_text',
+                'goal_weight',
+                'goal_waist',
+                'goal_personal',
+                'observations',
+                'price',
+                'payment_status',
+                'created_by',
+                'updated_by',
+                'deleted_at',
+            ])
+            ->wherePivotNull('deleted_at')
+            ->withTimestamps();
     }
 
     public function commentaires(): MorphMany
