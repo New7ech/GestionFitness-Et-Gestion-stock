@@ -21,7 +21,8 @@
             <form action="{{ route('inscriptions.store') }}" method="POST" enctype="multipart/form-data">
                 @csrf
                 @php($participantMode = old('participante_mode', 'existing'))
-                @php($challengeMode = old('challenge_mode', request('challenge_id') ? 'existing' : 'existing'))
+                @php($selectedParticipant = old('participante_id', request('participante_id')))
+                @php($challengeMode = old('challenge_mode', 'existing'))
                 @php($selectedChallenge = old('challenge_id', request('challenge_id')))
 
                 <h5 class="fw-bold">Participante</h5>
@@ -34,7 +35,7 @@
                     <select name="participante_id" id="participante_id" class="form-select @error('participante_id') is-invalid @enderror">
                         <option value="">-- Choisir une participante --</option>
                         @foreach ($participantes as $participante)
-                            <option value="{{ $participante->id }}" @selected((int) old('participante_id') === $participante->id)>{{ $participante->full_name }} — {{ $participante->phone }}</option>
+                            <option value="{{ $participante->id }}" @selected((int) $selectedParticipant === $participante->id)>{{ $participante->full_name }} — {{ $participante->phone }}</option>
                         @endforeach
                     </select>
                     @error('participante_id')<div class="invalid-feedback">{{ $message }}</div>@enderror
