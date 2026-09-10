@@ -1,9 +1,12 @@
 <div class="row">
     @forelse ($mediaItems as $media)
         @php
-            $attachedChallenge = $media->mediable instanceof \App\Models\Challenge
+            $attachedInscription = $media->mediable instanceof \App\Models\Inscription
                 ? $media->mediable
-                : $media->mediable?->challenge;
+                : $media->mediable?->inscription;
+            $legacyChallenge = $media->mediable instanceof \App\Models\Challenge
+                ? $media->mediable
+                : null;
         @endphp
         <div class="col-md-4">
             <div class="card">
@@ -22,9 +25,11 @@
                         <div class="fw-bold">{{ $media->type->label() }} - {{ $media->stage->label() }}</div>
                         <div class="text-muted small">{{ $media->original_filename }}</div>
                         <div class="text-muted small">
-                            {{ $attachedChallenge?->participante?->full_name ?? 'N/A' }}
-                            @if ($attachedChallenge)
-                                - {{ $attachedChallenge->challengeType?->label }}
+                            {{ $attachedInscription?->participante?->full_name ?? 'N/A' }}
+                            @if ($attachedInscription)
+                                - {{ $attachedInscription->challenge?->challengeType?->label }}
+                            @elseif ($legacyChallenge)
+                                - {{ $legacyChallenge->challengeType?->label }}
                             @endif
                         </div>
                         <div class="text-muted small">

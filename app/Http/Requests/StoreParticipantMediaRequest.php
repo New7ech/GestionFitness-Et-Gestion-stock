@@ -4,10 +4,8 @@ namespace App\Http\Requests;
 
 use App\Enums\MeasurementStage;
 use App\Enums\MediaType;
-use App\Models\Mesure;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
-use Illuminate\Validation\Validator;
 
 class StoreParticipantMediaRequest extends FormRequest
 {
@@ -22,7 +20,6 @@ class StoreParticipantMediaRequest extends FormRequest
             'type' => ['required', Rule::enum(MediaType::class)],
             'stage' => ['required', Rule::enum(MeasurementStage::class)],
             'media' => $this->mediaRules(),
-            'mesure_id' => ['nullable', 'exists:mesures,id'],
         ];
     }
 
@@ -39,29 +36,7 @@ class StoreParticipantMediaRequest extends FormRequest
             'media.mimes' => 'Le format du fichier est invalide.',
             'media.mimetypes' => 'Le type MIME du fichier est invalide.',
             'media.max' => 'Le fichier dépasse la taille maximale autorisée.',
-            'mesure_id.exists' => 'La mesure sélectionnée est invalide.',
         ];
-    }
-
-    public function withValidator(Validator $validator): void
-    {
-        $validator->after(function (Validator $validator): void {
-            $challenge = $this->route('challenge');
-            $mesureId = $this->input('mesure_id');
-
-            if (! $challenge || ! $mesureId) {
-                return;
-            }
-
-            $belongsToChallenge = Mesure::query()
-                ->whereKey($mesureId)
-                ->where('challenge_id', $challenge->id)
-                ->exists();
-
-            if (! $belongsToChallenge) {
-                $validator->errors()->add('mesure_id', 'La mesure sélectionnée ne correspond pas à ce challenge.');
-            }
-        });
     }
 
     private function mediaRules(): array

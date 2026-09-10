@@ -239,10 +239,10 @@
                                         <tr>
                                             <td>
                                                 <a href="{{ route('mesures.show', $mesure) }}" class="fw-bold text-decoration-none">
-                                                    {{ $mesure->challenge->participante->full_name }}
+                                                    {{ $mesure->inscription->participante->full_name }}
                                                 </a>
                                             </td>
-                                            <td>{{ $mesure->challenge->challengeType->label }}</td>
+                                            <td>{{ $mesure->inscription->challenge->challengeType->label }}</td>
                                             <td class="text-center">
                                                 <span class="badge badge-info">{{ $mesure->stage->label() }}</span>
                                             </td>

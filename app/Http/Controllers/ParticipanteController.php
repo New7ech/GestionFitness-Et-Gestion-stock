@@ -91,9 +91,9 @@ class ParticipanteController extends Controller
         $this->authorize('view', $participante);
 
         $participante->load([
-            'challenges' => fn ($query) => $query
+            'inscriptions' => fn ($query) => $query
                 ->with([
-                    'challengeType',
+                    'challenge.challengeType',
                     'paiements.recu',
                     'presences.recordedBy',
                     'presences.updatedBy',

@@ -70,7 +70,7 @@
                         </div>
                         <div class="col col-stats ms-3 ms-sm-0">
                             <div class="numbers">
-                                <p class="card-category">Challenges en cours</p>
+                                <p class="card-category">Inscriptions en cours</p>
                                 <h4 class="card-title">{{ number_format($challengesEnCours, 0, ',', ' ') }}</h4>
                             </div>
                         </div>
@@ -152,7 +152,7 @@
         <div class="col-md-4">
             <div class="card card-round">
                 <div class="card-header">
-                    <div class="card-title">Etat des challenges</div>
+                    <div class="card-title">Etat des inscriptions</div>
                 </div>
                 <div class="card-body">
                     <div class="d-flex justify-content-between align-items-center mb-3">
@@ -190,12 +190,12 @@
         <div class="col-md-8">
             <div class="card card-round">
                 <div class="card-header">
-                    <div class="card-title">Challenges a suivre</div>
-                    <div class="card-category">Challenges en cours ou planifies les plus recents.</div>
+                    <div class="card-title">Inscriptions a suivre</div>
+                    <div class="card-category">Inscriptions en cours ou planifiees les plus recentes.</div>
                 </div>
                 <div class="card-body p-0">
                     @if($challengesRecents->isEmpty())
-                        <div class="text-center py-5 text-muted">Aucun challenge a afficher.</div>
+                        <div class="text-center py-5 text-muted">Aucune inscription a afficher.</div>
                     @else
                         <div class="table-responsive">
                             <table class="table align-items-center mb-0">
@@ -208,20 +208,20 @@
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    @foreach($challengesRecents as $challenge)
+                                    @foreach($challengesRecents as $inscription)
                                         <tr>
                                             <td>
-                                                <a href="{{ route('challenges.show', $challenge) }}" class="fw-bold text-decoration-none">
-                                                    {{ $challenge->participante->full_name }}
+                                                <a href="{{ route('challenges.show', $inscription->challenge) }}" class="fw-bold text-decoration-none">
+                                                    {{ $inscription->participante->full_name }}
                                                 </a>
                                             </td>
-                                            <td>{{ $challenge->challengeType->label }}</td>
+                                            <td>{{ $inscription->challenge->challengeType->label }}</td>
                                             <td class="text-center">
-                                                <span class="badge badge-{{ $challenge->status->value === 'en_cours' ? 'success' : 'info' }}">
-                                                    {{ $challenge->status->label() }}
+                                                <span class="badge badge-{{ $inscription->status->value === 'en_cours' ? 'success' : 'info' }}">
+                                                    {{ $inscription->status->label() }}
                                                 </span>
                                             </td>
-                                            <td class="text-end">{{ $challenge->end_date?->format('d/m/Y') }}</td>
+                                            <td class="text-end">{{ $inscription->challenge->end_date?->format('d/m/Y') }}</td>
                                         </tr>
                                     @endforeach
                                 </tbody>
@@ -312,23 +312,23 @@
             <div class="col-md-12">
                 <div class="card card-round">
                     <div class="card-header">
-                        <div class="card-title">Challenges a cloturer sous 7 jours</div>
+                        <div class="card-title">Inscriptions a cloturer sous 7 jours</div>
                     </div>
                     <div class="card-body">
                         <div class="row">
-                            @foreach($challengesACloturer as $challenge)
+                            @foreach($challengesACloturer as $inscription)
                                 <div class="col-md-6 col-lg-4">
                                     <div class="d-flex align-items-center border rounded p-3 mb-3">
                                         <div class="avatar avatar-sm me-3">
                                             <span class="avatar-title rounded-circle bg-primary">
-                                                {{ mb_substr($challenge->participante->first_name, 0, 1) }}{{ mb_substr($challenge->participante->last_name, 0, 1) }}
+                                                {{ mb_substr($inscription->participante->first_name, 0, 1) }}{{ mb_substr($inscription->participante->last_name, 0, 1) }}
                                             </span>
                                         </div>
                                         <div class="flex-1">
-                                            <a href="{{ route('challenges.show', $challenge) }}" class="fw-bold text-decoration-none">
-                                                {{ $challenge->participante->full_name }}
+                                            <a href="{{ route('challenges.show', $inscription->challenge) }}" class="fw-bold text-decoration-none">
+                                                {{ $inscription->participante->full_name }}
                                             </a>
-                                            <div class="text-muted small">{{ $challenge->challengeType->label }} - fin {{ $challenge->end_date?->format('d/m/Y') }}</div>
+                                            <div class="text-muted small">{{ $inscription->challenge->challengeType->label }} - fin {{ $inscription->challenge->end_date?->format('d/m/Y') }}</div>
                                         </div>
                                     </div>
                                 </div>

@@ -8,6 +8,7 @@ use App\Enums\ParticipantStatus;
 use App\Enums\PaymentMode;
 use App\Enums\PaymentType;
 use App\Models\Challenge;
+use App\Models\Inscription;
 use App\Models\Paiement;
 use App\Models\Participante;
 use App\Models\Presence;
@@ -28,15 +29,15 @@ class AccueilController extends Controller
             ->where('status', ParticipantStatus::Active->value)
             ->count();
 
-        $challengesEnCours = Challenge::query()
+        $challengesEnCours = Inscription::query()
             ->where('status', ChallengeStatus::EnCours->value)
             ->count();
 
-        $challengesPlanifies = Challenge::query()
+        $challengesPlanifies = Inscription::query()
             ->where('status', ChallengeStatus::Planifie->value)
             ->count();
 
-        $challengesTermines = Challenge::query()
+        $challengesTermines = Inscription::query()
             ->where('status', ChallengeStatus::Termine->value)
             ->count();
 
@@ -67,21 +68,26 @@ class AccueilController extends Controller
             ->count();
 
         $recusRecents = Recu::query()
-            ->with(['paiement.challenge.participante', 'paiement.challenge.challengeType'])
             ->latest('issued_at')
             ->limit(5)
             ->get();
 
-        $challengesACloturer = Challenge::query()
-            ->with(['participante', 'challengeType'])
+        $challengesACloturer = Inscription::query()
+            ->with(['participante', 'challenge.challengeType'])
             ->where('status', ChallengeStatus::EnCours->value)
-            ->whereBetween('end_date', [$today, $now->copy()->addDays(7)->toDateString()])
-            ->orderBy('end_date')
+            ->whereHas('challenge', function ($query) use ($today, $now): void {
+                $query->whereBetween('end_date', [$today, $now->copy()->addDays(7)->toDateString()]);
+            })
+            ->orderBy(
+                Challenge::query()
+                    ->select('end_date')
+                    ->whereColumn('challenges.id', 'inscriptions.challenge_id')
+            )
             ->limit(5)
             ->get();
 
-        $challengesRecents = Challenge::query()
-            ->with(['participante', 'challengeType'])
+        $challengesRecents = Inscription::query()
+            ->with(['participante', 'challenge.challengeType'])
             ->whereIn('status', [ChallengeStatus::EnCours->value, ChallengeStatus::Planifie->value])
             ->latest()
             ->limit(6)
@@ -106,7 +112,8 @@ class AccueilController extends Controller
                 ];
             });
 
-        $challengesParType = Challenge::query()
+        $challengesParType = Inscription::query()
+            ->join('challenges', 'inscriptions.challenge_id', '=', 'challenges.id')
             ->join('challenge_types', 'challenges.challenge_type_id', '=', 'challenge_types.id')
             ->selectRaw('challenge_types.label as label, COUNT(*) as total')
             ->groupBy('challenge_types.label')

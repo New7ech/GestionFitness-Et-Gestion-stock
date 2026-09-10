@@ -6,7 +6,7 @@ use App\Enums\AttendanceStatus;
 use App\Enums\ChallengeStatus;
 use App\Enums\PaymentStatus;
 use App\Enums\PaymentType;
-use App\Models\Challenge;
+use App\Models\Inscription;
 use App\Models\Mesure;
 use App\Models\Paiement;
 use App\Models\Participante;
@@ -23,8 +23,8 @@ class StatistiqueController extends Controller
         $endToday = $today->toDateString();
 
         $totalParticipantes = Participante::query()->count();
-        $totalChallenges = Challenge::query()->count();
-        $challengesTermines = Challenge::query()
+        $totalChallenges = Inscription::query()->count();
+        $challengesTermines = Inscription::query()
             ->where('status', ChallengeStatus::Termine->value)
             ->count();
 
@@ -61,7 +61,7 @@ class StatistiqueController extends Controller
             ->map(fn (ChallengeStatus $status) => [
                 'label' => $status->label(),
                 'value' => $status->value,
-                'total' => Challenge::query()->where('status', $status->value)->count(),
+                'total' => Inscription::query()->where('status', $status->value)->count(),
             ])
             ->filter(fn (array $status) => $status['total'] > 0)
             ->values();
@@ -70,7 +70,7 @@ class StatistiqueController extends Controller
             ->map(fn (PaymentStatus $status) => [
                 'label' => $status->label(),
                 'value' => $status->value,
-                'total' => Challenge::query()->where('payment_status', $status->value)->count(),
+                'total' => Inscription::query()->where('payment_status', $status->value)->count(),
             ])
             ->filter(fn (array $status) => $status['total'] > 0)
             ->values();
@@ -118,10 +118,10 @@ class StatistiqueController extends Controller
         }
 
         $revenusParType = Paiement::query()
-            ->with('challenge.challengeType')
+            ->with('inscription.challenge.challengeType')
             ->whereBetween('payment_date', [$start30Days, $endToday])
             ->get()
-            ->groupBy(fn (Paiement $paiement) => $paiement->challenge?->challengeType?->label ?? 'Sans type')
+            ->groupBy(fn (Paiement $paiement) => $paiement->inscription?->challenge?->challengeType?->label ?? 'Sans type')
             ->map(function ($paiements, string $label): array {
                 $paiementsBruts = $paiements
                     ->where('type', PaymentType::Paiement)
@@ -138,13 +138,13 @@ class StatistiqueController extends Controller
             ->sortByDesc('total')
             ->values();
 
-        $completionParType = Challenge::query()
-            ->with('challengeType')
+        $completionParType = Inscription::query()
+            ->with('challenge.challengeType')
             ->get()
-            ->groupBy(fn (Challenge $challenge) => $challenge->challengeType?->label ?? 'Sans type')
-            ->map(function ($challenges, string $label): array {
-                $total = $challenges->count();
-                $termines = $challenges
+            ->groupBy(fn (Inscription $inscription) => $inscription->challenge?->challengeType?->label ?? 'Sans type')
+            ->map(function ($inscriptions, string $label): array {
+                $total = $inscriptions->count();
+                $termines = $inscriptions
                     ->where('status', ChallengeStatus::Termine)
                     ->count();
 
@@ -159,7 +159,7 @@ class StatistiqueController extends Controller
             ->values();
 
         $mesuresRecentes = Mesure::query()
-            ->with(['challenge.participante', 'challenge.challengeType'])
+            ->with(['inscription.participante', 'inscription.challenge.challengeType'])
             ->orderByDesc('measured_at')
             ->orderByDesc('id')
             ->limit(8)

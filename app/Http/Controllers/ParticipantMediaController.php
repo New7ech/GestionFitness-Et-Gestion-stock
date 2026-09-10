@@ -6,6 +6,7 @@ use App\Enums\MeasurementStage;
 use App\Enums\MediaType;
 use App\Http\Requests\StoreParticipantMediaRequest;
 use App\Models\Challenge;
+use App\Models\Inscription;
 use App\Models\Media;
 use App\Models\Mesure;
 use Illuminate\Contracts\View\View;
@@ -28,8 +29,9 @@ class ParticipantMediaController extends Controller
                 'uploadedBy',
                 'mediable' => function (MorphTo $morphTo): void {
                     $morphTo->morphWith([
-                        Challenge::class => ['participante', 'challengeType'],
-                        Mesure::class => ['challenge.participante', 'challenge.challengeType'],
+                        Challenge::class => ['challengeType'],
+                        Inscription::class => ['participante', 'challenge.challengeType'],
+                        Mesure::class => ['inscription.participante', 'inscription.challenge.challengeType'],
                     ]);
                 },
             ])
@@ -40,8 +42,8 @@ class ParticipantMediaController extends Controller
                 $query->where(function ($searchQuery) use ($term): void {
                     $searchQuery
                         ->where('original_filename', 'like', "%{$term}%")
-                        ->orWhereHasMorph('mediable', [Challenge::class], function ($challengeQuery) use ($term): void {
-                            $challengeQuery->whereHas('participante', function ($participanteQuery) use ($term): void {
+                        ->orWhereHasMorph('mediable', [Inscription::class], function ($inscriptionQuery) use ($term): void {
+                            $inscriptionQuery->whereHas('participante', function ($participanteQuery) use ($term): void {
                                 $participanteQuery
                                     ->where('first_name', 'like', "%{$term}%")
                                     ->orWhere('last_name', 'like', "%{$term}%")
@@ -49,7 +51,7 @@ class ParticipantMediaController extends Controller
                             });
                         })
                         ->orWhereHasMorph('mediable', [Mesure::class], function ($mesureQuery) use ($term): void {
-                            $mesureQuery->whereHas('challenge.participante', function ($participanteQuery) use ($term): void {
+                            $mesureQuery->whereHas('inscription.participante', function ($participanteQuery) use ($term): void {
                                 $participanteQuery
                                     ->where('first_name', 'like', "%{$term}%")
                                     ->orWhere('last_name', 'like', "%{$term}%")
@@ -69,34 +71,25 @@ class ParticipantMediaController extends Controller
         ]);
     }
 
-    public function store(StoreParticipantMediaRequest $request, Challenge $challenge): RedirectResponse
+    public function store(StoreParticipantMediaRequest $request, Inscription $inscription): RedirectResponse
     {
-        $this->authorize('view', $challenge);
+        $this->authorize('view', $inscription);
         $this->authorize('create', Media::class);
 
         $data = $request->validated();
         $file = $request->file('media');
         $type = MediaType::from($data['type']);
         $stage = MeasurementStage::from($data['stage']);
-
-        $mediable = $challenge;
-
-        if (! empty($data['mesure_id'])) {
-            $mediable = Mesure::query()
-                ->where('challenge_id', $challenge->id)
-                ->findOrFail($data['mesure_id']);
-        }
-
         $extension = strtolower($file->getClientOriginalExtension());
         $path = $file->storeAs(
-            "participantes/{$challenge->participante_id}/challenges/{$challenge->id}/media/{$type->value}",
+            "participantes/{$inscription->participante_id}/inscriptions/{$inscription->id}/media/{$type->value}",
             Str::random(40).'.'.$extension,
             'participant_media'
         );
 
         Media::query()->create([
-            'mediable_type' => $mediable::class,
-            'mediable_id' => $mediable->id,
+            'mediable_type' => Inscription::class,
+            'mediable_id' => $inscription->id,
             'type' => $type,
             'stage' => $stage,
             'disk_path' => $path,
@@ -115,12 +108,7 @@ class ParticipantMediaController extends Controller
 
         $path = ltrim((string) $media->disk_path, '/');
 
-        if (
-            $path === ''
-            || str_contains($path, '..')
-            || str_contains($path, '\\')
-            || ! Storage::disk('participant_media')->exists($path)
-        ) {
+        if ($path === '' || str_contains($path, '..') || str_contains($path, '\\') || ! Storage::disk('participant_media')->exists($path)) {
             abort(404);
         }
 

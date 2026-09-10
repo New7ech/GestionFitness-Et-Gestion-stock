@@ -19,7 +19,7 @@ class RecuController extends Controller
         $this->authorize('viewAny', Recu::class);
 
         $recus = Recu::query()
-            ->with('paiement.challenge.participante')
+            ->with('paiement.inscription.participante')
             ->when($request->filled('q'), function ($query) use ($request): void {
                 $term = $request->string('q')->toString();
                 $query->where(function ($nestedQuery) use ($term): void {
@@ -51,7 +51,7 @@ class RecuController extends Controller
         $this->authorize('view', $recu);
 
         return view('recus.show', [
-            'recu' => $recu->load('paiement.challenge.participante', 'paiement.challenge.challengeType', 'generatedBy'),
+            'recu' => $recu->load('paiement.inscription.participante', 'paiement.inscription.challenge.challengeType', 'generatedBy'),
         ]);
     }
 
