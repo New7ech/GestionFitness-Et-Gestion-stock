@@ -19,7 +19,7 @@ class MesureService
             $mesure = Mesure::query()->create($data);
             $this->storeValues($mesure, is_array($values) ? $values : []);
 
-            return $mesure->load(['challenge.participante', 'challenge.challengeType', 'values.measurementType']);
+            return $mesure->load(['inscription.participante', 'inscription.challenge.challengeType', 'values.measurementType']);
         });
     }
 
