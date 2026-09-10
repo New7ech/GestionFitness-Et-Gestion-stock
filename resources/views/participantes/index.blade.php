@@ -17,14 +17,22 @@
         <div class="col-md-12">
             <div class="card">
                 <div class="card-header">
-                    <div class="d-flex align-items-center">
+                    <div class="d-flex align-items-center flex-wrap gap-2">
                         <h4 class="card-title">Liste des Participantes</h4>
-                        @can('create', \App\Models\Participante::class)
-                            <a href="{{ route('participantes.create') }}" class="btn btn-primary btn-round ms-auto">
-                                <i class="fa fa-plus"></i>
-                                Ajouter une participante
-                            </a>
-                        @endcan
+                        <div class="ms-auto">
+                            @can('create-inscriptions')
+                                <a href="{{ route('inscriptions.create') }}" class="btn btn-success btn-round">
+                                    <i class="fa fa-user-plus"></i>
+                                    Nouvelle inscription
+                                </a>
+                            @endcan
+                            @can('create', \App\Models\Participante::class)
+                                <a href="{{ route('participantes.create') }}" class="btn btn-primary btn-round">
+                                    <i class="fa fa-plus"></i>
+                                    Ajouter une participante
+                                </a>
+                            @endcan
+                        </div>
                     </div>
                 </div>
                 <div class="card-body">

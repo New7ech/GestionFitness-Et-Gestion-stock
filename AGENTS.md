@@ -49,7 +49,7 @@ Le domaine fitness gère le cycle : inscription → paiement → reçu → chall
 
 - Toute nouvelle table historique (paiements, reçus, mesures, présences, médias, commentaires, challenges, participantes) utilise `SoftDeletes`.
 - Toute colonne `created_by`/`updated_by`/`recorded_by`/`uploaded_by` : `foreignId(...)->nullable()->constrained('users')->onDelete('set null')` — **toujours avec contrainte FK réelle**.
-- Contraintes d'unicité au niveau **base de données** quand la règle métier l'exige (ex. `UNIQUE(challenge_id, attendance_date)` sur les présences) — ne pas se reposer uniquement sur la validation applicative pour ce type de règle.
+- Contraintes d'unicité au niveau **base de données** quand la règle métier l'exige (ex. `UNIQUE(inscription_id, attendance_date)` sur les présences) — ne pas se reposer uniquement sur la validation applicative pour ce type de règle.
 - Index sur toute colonne de filtre/tri fréquent (statuts, dates de fin, clés étrangères de recherche).
 - Ne jamais stocker de colonne dénormalisée redondante sans raison documentée — exception assumée et documentée : les champs "snapshot" d'un reçu déjà émis (figés intentionnellement, cf. section 10).
 
@@ -137,12 +137,15 @@ docker compose exec app composer install
 
 ## 13. Règles métier (résumé — détail complet dans `02-PROMPT-CODEX.md`)
 
-- Une participante peut avoir plusieurs challenges au fil du temps ; tout ce qui est daté (paiements, présences, mesures, médias, bilan) est rattaché au **challenge**, jamais directement à la participante.
+- Un challenge est une session ou un programme partageable pouvant accueillir plusieurs participantes en même temps.
+- Chaque participation individuelle est portée par une **Inscription**, qui relie une participante à une session et contient ses objectifs, son prix, son statut de paiement et son statut de progression.
+- Une participante peut avoir plusieurs challenges au fil du temps via ses inscriptions ; ne pas revenir à un `challenges.participante_id`.
+- Tout ce qui est daté (paiements, présences, mesures, médias, commentaires, bilan) est rattaché à l'**inscription**, jamais directement au challenge ni à la participante.
 - Seules les informations permanentes (identité, antécédents de santé déclarés) vivent sur la fiche participante.
 - `end_date` d'un challenge est **toujours calculée**, jamais saisie manuellement.
-- `payment_status` d'un challenge est **toujours recalculé** à partir de ses paiements, jamais édité manuellement.
+- `payment_status` d'une inscription est **toujours recalculé** à partir de ses paiements, jamais édité manuellement.
 - Une mesure existante n'est **jamais écrasée** — historique intégral conservé.
-- Une seule présence par participante (via son challenge) et par date — contrainte base de données.
+- Une seule présence par inscription et par date — contrainte base de données.
 - Chaque paiement, présence, mesure, média enregistre l'utilisateur qui l'a créé/modifié.
 
 ---
@@ -153,6 +156,8 @@ docker compose exec app composer install
 |---|---|
 | `app/Services/PaymentService.php` | Référence pour la logique transactionnelle des paiements et le recalcul du statut de paiement |
 | `app/Services/RecuService.php` | Référence pour la génération des reçus fitness et les snapshots financiers |
+| `app/Services/InscriptionService.php` | Référence pour la création transactionnelle d'une participante et de son premier challenge |
+| `app/Models/Inscription.php` | Modèle pivot entre participante et challenge ; porte les données individuelles d'une participante dans une session |
 | `app/Http/Controllers/MediaController.php` | Exemple de garde anti-traversal — **ne pas réutiliser tel quel** pour les médias participantes (absence d'authentification) |
 | `database/seeders/ImproveRolesAndPermissionsSeeder.php` | Seeder des rôles/permissions — à étendre, jamais à remplacer |
 | `resources/views/layouts/sidebar.blade.php` | Menu latéral — ajouter les nouvelles entrées en les conditionnant par permission |

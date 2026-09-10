@@ -2,6 +2,8 @@
 
 namespace Tests\Feature;
 
+use App\Models\Challenge;
+use App\Models\Inscription;
 use App\Models\Participante;
 use App\Models\User;
 use Database\Seeders\ImproveRolesAndPermissionsSeeder;
@@ -129,6 +131,37 @@ class ParticipanteManagementTest extends TestCase
             ->assertRedirect();
 
         $this->assertDatabaseHas('participantes', ['email' => 'fatou@example.com']);
+    }
+
+    #[Test]
+    public function fiche_participante_affiche_l_historique_de_ses_inscriptions(): void
+    {
+        $manager = User::factory()->create();
+        $manager->assignRole('manager');
+        $participante = Participante::factory()->create();
+        $firstInscription = Inscription::factory()->create([
+            'participante_id' => $participante->id,
+            'challenge_id' => Challenge::factory()->create([
+                'start_date' => '2026-08-01',
+                'duration_days' => 15,
+            ])->id,
+        ]);
+        $secondInscription = Inscription::factory()->create([
+            'participante_id' => $participante->id,
+            'challenge_id' => Challenge::factory()->create([
+                'start_date' => '2026-09-01',
+                'duration_days' => 30,
+            ])->id,
+        ]);
+
+        $response = $this->actingAs($manager)->get(route('participantes.show', $participante));
+
+        $response->assertOk();
+        $response->assertSee('01/08/2026');
+        $response->assertSee('01/09/2026');
+        $this->assertCount(2, $participante->fresh()->inscriptions);
+        $this->assertTrue($participante->fresh()->challenges->contains($firstInscription->challenge));
+        $this->assertTrue($participante->fresh()->challenges->contains($secondInscription->challenge));
     }
 
     #[Test]

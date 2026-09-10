@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Enums\MeasurementStage;
 use App\Enums\MediaType;
 use App\Models\Challenge;
+use App\Models\Inscription;
 use App\Models\MeasurementType;
 use App\Models\Media;
 use App\Models\Mesure;
@@ -36,18 +37,16 @@ class MeasurementAndMediaManagementTest extends TestCase
     public function manager_peut_creer_une_mesure_avec_valeurs_complementaires(): void
     {
         $manager = $this->manager();
-        $challenge = Challenge::factory()->create();
+        $inscription = $this->inscription();
         $measurementType = MeasurementType::query()->where('code', 'hanches')->firstOrFail();
 
         $response = $this->actingAs($manager)->post(route('mesures.store'), [
-            'challenge_id' => $challenge->id,
+            'inscription_id' => $inscription->id,
             'measured_at' => '2026-08-11',
             'stage' => MeasurementStage::Initiale->value,
             'weight' => 82.5,
             'waist' => 96.25,
-            'measurement_values' => [
-                $measurementType->id => 105.75,
-            ],
+            'measurement_values' => [$measurementType->id => 105.75],
             'comment' => 'Mesure initiale.',
         ]);
 
@@ -55,7 +54,7 @@ class MeasurementAndMediaManagementTest extends TestCase
         $value = $mesure->values()->firstOrFail();
 
         $response->assertRedirect(route('mesures.show', $mesure));
-        $this->assertSame($challenge->id, $mesure->challenge_id);
+        $this->assertSame($inscription->id, $mesure->inscription_id);
         $this->assertSame($manager->id, $mesure->recorded_by);
         $this->assertSame(82.5, (float) $mesure->weight);
         $this->assertSame($measurementType->id, $value->measurement_type_id);
@@ -70,14 +69,14 @@ class MeasurementAndMediaManagementTest extends TestCase
         $response = $this->actingAs($manager)
             ->from(route('mesures.create'))
             ->post(route('mesures.store'), [
-                'challenge_id' => '',
+                'inscription_id' => '',
                 'measured_at' => '',
                 'stage' => '',
                 'weight' => '',
             ]);
 
         $response->assertRedirect(route('mesures.create'));
-        $response->assertSessionHasErrors(['challenge_id', 'measured_at', 'stage', 'weight']);
+        $response->assertSessionHasErrors(['inscription_id', 'measured_at', 'stage', 'weight']);
         $this->assertDatabaseCount('mesures', 0);
     }
 
@@ -85,12 +84,11 @@ class MeasurementAndMediaManagementTest extends TestCase
     public function utilisateur_sans_permission_ne_peut_pas_creer_de_mesure(): void
     {
         $user = User::factory()->create();
-        $challenge = Challenge::factory()->create();
+        $inscription = $this->inscription();
 
         $this->actingAs($user)->get(route('mesures.create'))->assertForbidden();
-
         $this->actingAs($user)->post(route('mesures.store'), [
-            'challenge_id' => $challenge->id,
+            'inscription_id' => $inscription->id,
             'measured_at' => '2026-08-11',
             'stage' => MeasurementStage::Initiale->value,
             'weight' => 82.5,
@@ -100,22 +98,22 @@ class MeasurementAndMediaManagementTest extends TestCase
     }
 
     #[Test]
-    public function trois_mesures_successives_restent_toutes_conservees(): void
+    public function trois_mesures_successives_restent_toutes_conservees_sur_la_meme_inscription(): void
     {
         $manager = $this->manager();
-        $challenge = Challenge::factory()->create();
+        $inscription = $this->inscription();
 
         foreach ([82.5, 81.2, 79.9] as $index => $weight) {
             $this->actingAs($manager)->post(route('mesures.store'), [
-                'challenge_id' => $challenge->id,
-                'measured_at' => now()->addDays($index)->toDateString(),
+                'inscription_id' => $inscription->id,
+                'measured_at' => '2026-08-0'.($index + 1),
                 'stage' => MeasurementStage::Intermediaire->value,
                 'weight' => $weight,
             ])->assertRedirect();
         }
 
         $weights = Mesure::query()
-            ->where('challenge_id', $challenge->id)
+            ->where('inscription_id', $inscription->id)
             ->orderBy('id')
             ->pluck('weight')
             ->map(fn ($weight): float => (float) $weight)
@@ -128,9 +126,9 @@ class MeasurementAndMediaManagementTest extends TestCase
     public function correction_mesure_cree_une_nouvelle_ligne_sans_ecraser_l_originale(): void
     {
         $manager = $this->manager();
-        $challenge = Challenge::factory()->create();
+        $inscription = $this->inscription();
         $mesure = Mesure::factory()->create([
-            'challenge_id' => $challenge->id,
+            'inscription_id' => $inscription->id,
             'measured_at' => '2026-08-11',
             'stage' => MeasurementStage::Initiale,
             'weight' => 82.5,
@@ -139,7 +137,7 @@ class MeasurementAndMediaManagementTest extends TestCase
         ]);
 
         $response = $this->actingAs($manager)->put(route('mesures.update', $mesure), [
-            'challenge_id' => $challenge->id,
+            'inscription_id' => $inscription->id,
             'measured_at' => '2026-08-12',
             'stage' => MeasurementStage::Intermediaire->value,
             'weight' => 81.4,
@@ -149,18 +147,40 @@ class MeasurementAndMediaManagementTest extends TestCase
         $newMesure = Mesure::query()->whereKeyNot($mesure->id)->firstOrFail();
 
         $response->assertRedirect(route('mesures.show', $newMesure));
-        $this->assertSame(2, Mesure::query()->where('challenge_id', $challenge->id)->count());
+        $this->assertSame(2, Mesure::query()->where('inscription_id', $inscription->id)->count());
         $this->assertSame(82.5, (float) $mesure->fresh()->weight);
         $this->assertSame(81.4, (float) $newMesure->weight);
     }
 
     #[Test]
-    public function manager_peut_uploader_un_media_sur_disque_prive(): void
+    public function une_mesure_sur_une_inscription_n_affecte_pas_l_autre_inscription_de_la_session(): void
     {
         $manager = $this->manager();
-        $challenge = Challenge::factory()->create();
+        $challenge = Challenge::factory()->create([
+            'start_date' => '2026-08-01',
+            'duration_days' => 30,
+        ]);
+        $firstInscription = Inscription::factory()->create(['challenge_id' => $challenge->id]);
+        $secondInscription = Inscription::factory()->create(['challenge_id' => $challenge->id]);
 
-        $response = $this->actingAs($manager)->post(route('challenges.media.store', $challenge), [
+        $this->actingAs($manager)->post(route('mesures.store'), [
+            'inscription_id' => $firstInscription->id,
+            'measured_at' => '2026-08-11',
+            'stage' => MeasurementStage::Initiale->value,
+            'weight' => 82.5,
+        ])->assertRedirect();
+
+        $this->assertSame(1, $firstInscription->mesures()->count());
+        $this->assertSame(0, $secondInscription->mesures()->count());
+    }
+
+    #[Test]
+    public function manager_peut_uploader_un_media_prive_sur_une_inscription(): void
+    {
+        $manager = $this->manager();
+        $inscription = $this->inscription();
+
+        $response = $this->actingAs($manager)->post(route('inscriptions.media.store', $inscription), [
             'type' => MediaType::Photo->value,
             'stage' => MeasurementStage::Initiale->value,
             'media' => UploadedFile::fake()->image('avant.jpg', 400, 400)->size(600),
@@ -171,7 +191,8 @@ class MeasurementAndMediaManagementTest extends TestCase
         $response->assertRedirect();
         $this->assertSame($manager->id, $media->uploaded_by);
         $this->assertSame(MediaType::Photo, $media->type);
-        $this->assertStringStartsWith("participantes/{$challenge->participante_id}/challenges/{$challenge->id}/media/photo/", $media->disk_path);
+        $this->assertSame(Inscription::class, $media->mediable_type);
+        $this->assertStringStartsWith("participantes/{$inscription->participante_id}/inscriptions/{$inscription->id}/media/photo/", $media->disk_path);
         Storage::disk('participant_media')->assertExists($media->disk_path);
     }
 
@@ -179,17 +200,17 @@ class MeasurementAndMediaManagementTest extends TestCase
     public function upload_media_rejette_un_type_de_fichier_invalide(): void
     {
         $manager = $this->manager();
-        $challenge = Challenge::factory()->create();
+        $inscription = $this->inscription();
 
         $response = $this->actingAs($manager)
-            ->from(route('challenges.show', $challenge))
-            ->post(route('challenges.media.store', $challenge), [
+            ->from(route('inscriptions.show', $inscription))
+            ->post(route('inscriptions.media.store', $inscription), [
                 'type' => MediaType::Photo->value,
                 'stage' => MeasurementStage::Initiale->value,
                 'media' => UploadedFile::fake()->create('notes.txt', 1, 'text/plain'),
             ]);
 
-        $response->assertRedirect(route('challenges.show', $challenge));
+        $response->assertRedirect(route('inscriptions.show', $inscription));
         $response->assertSessionHasErrors('media');
         $this->assertDatabaseCount('media', 0);
     }
@@ -197,13 +218,13 @@ class MeasurementAndMediaManagementTest extends TestCase
     #[Test]
     public function media_participante_est_servi_uniquement_aux_utilisateurs_autorises(): void
     {
-        $challenge = Challenge::factory()->create();
-        $path = "participantes/{$challenge->participante_id}/challenges/{$challenge->id}/media/photo/private.jpg";
+        $inscription = $this->inscription();
+        $path = "participantes/{$inscription->participante_id}/inscriptions/{$inscription->id}/media/photo/private.jpg";
         Storage::disk('participant_media')->put($path, 'private-media-content');
 
         $media = Media::factory()->create([
-            'mediable_type' => Challenge::class,
-            'mediable_id' => $challenge->id,
+            'mediable_type' => Inscription::class,
+            'mediable_id' => $inscription->id,
             'disk_path' => $path,
         ]);
 
@@ -227,5 +248,15 @@ class MeasurementAndMediaManagementTest extends TestCase
         $manager->assignRole('manager');
 
         return $manager;
+    }
+
+    private function inscription(): Inscription
+    {
+        $challenge = Challenge::factory()->create([
+            'start_date' => '2026-08-01',
+            'duration_days' => 30,
+        ]);
+
+        return Inscription::factory()->create(['challenge_id' => $challenge->id]);
     }
 }

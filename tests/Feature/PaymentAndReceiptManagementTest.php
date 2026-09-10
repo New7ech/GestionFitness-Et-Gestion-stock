@@ -6,6 +6,7 @@ use App\Enums\PaymentMode;
 use App\Enums\PaymentStatus;
 use App\Enums\PaymentType;
 use App\Models\Challenge;
+use App\Models\Inscription;
 use App\Models\Paiement;
 use App\Models\Recu;
 use App\Models\User;
@@ -32,25 +33,39 @@ class PaymentAndReceiptManagementTest extends TestCase
     }
 
     #[Test]
-    public function creation_paiement_partiel_recalcule_le_statut_et_le_solde(): void
+    public function creation_paiement_partiel_recalcule_le_statut_et_le_solde_de_l_inscription(): void
     {
         $manager = $this->manager();
-        $challenge = Challenge::factory()->create(['price' => 30000]);
+        $inscription = Inscription::factory()->create(['price' => 30000]);
 
-        $response = $this->actingAs($manager)->post(route('payments.store'), [
-            'challenge_id' => $challenge->id,
-            'amount' => 10000,
-            'type' => PaymentType::Paiement->value,
-            'payment_date' => '2026-08-11',
-            'payment_mode' => PaymentMode::Especes->value,
-        ]);
+        $response = $this->actingAs($manager)->post(route('payments.store'), $this->paymentPayload($inscription));
 
         $paiement = Paiement::query()->firstOrFail();
 
         $response->assertRedirect(route('payments.show', $paiement));
-        $this->assertSame(PaymentStatus::PartiellementPaye, $challenge->fresh()->payment_status);
-        $this->assertSame(20000.0, app(PaymentService::class)->remainingAmount($challenge->fresh()));
+        $this->assertSame(PaymentStatus::PartiellementPaye, $inscription->fresh()->payment_status);
+        $this->assertSame(20000.0, app(PaymentService::class)->remainingAmount($inscription->fresh()));
         $this->assertSame($manager->id, $paiement->recorded_by);
+    }
+
+    #[Test]
+    public function un_paiement_sur_une_inscription_n_affecte_pas_les_autres_inscriptions_de_la_session(): void
+    {
+        $manager = $this->manager();
+        $challenge = Challenge::factory()->create();
+        $firstInscription = Inscription::factory()->create(['challenge_id' => $challenge->id, 'price' => 30000]);
+        $secondInscription = Inscription::factory()->create(['challenge_id' => $challenge->id, 'price' => 40000]);
+
+        $this->actingAs($manager)
+            ->post(route('payments.store'), $this->paymentPayload($firstInscription))
+            ->assertRedirect();
+
+        $this->assertSame(PaymentStatus::PartiellementPaye, $firstInscription->fresh()->payment_status);
+        $this->assertSame(PaymentStatus::Impaye, $secondInscription->fresh()->payment_status);
+        $this->assertSame(20000.0, app(PaymentService::class)->remainingAmount($firstInscription->fresh()));
+        $this->assertSame(40000.0, app(PaymentService::class)->remainingAmount($secondInscription->fresh()));
+        $this->assertSame(1, $firstInscription->paiements()->count());
+        $this->assertSame(0, $secondInscription->paiements()->count());
     }
 
     #[Test]
@@ -58,30 +73,26 @@ class PaymentAndReceiptManagementTest extends TestCase
     {
         $manager = $this->manager();
         $service = app(PaymentService::class);
-        $challenge = Challenge::factory()->create(['price' => 30000]);
+        $inscription = Inscription::factory()->create(['price' => 30000]);
 
-        $paiement = $service->create([
-            'challenge_id' => $challenge->id,
+        $paiement = $service->create($this->paymentPayload($inscription, [
             'amount' => 30000,
-            'type' => PaymentType::Paiement->value,
-            'payment_date' => '2026-08-11',
             'payment_mode' => PaymentMode::Carte->value,
-        ], $manager->id);
+        ]), $manager->id);
 
-        $this->assertSame(PaymentStatus::Paye, $challenge->fresh()->payment_status);
+        $this->assertSame(PaymentStatus::Paye, $inscription->fresh()->payment_status);
 
-        $service->create([
-            'challenge_id' => $challenge->id,
+        $service->create($this->paymentPayload($inscription, [
             'amount' => 5000,
             'type' => PaymentType::Remboursement->value,
             'payment_date' => '2026-08-12',
             'payment_mode' => PaymentMode::Carte->value,
-        ], $manager->id);
+        ]), $manager->id);
 
-        $this->assertSame(PaymentStatus::Rembourse, $challenge->fresh()->payment_status);
+        $this->assertSame(PaymentStatus::Rembourse, $inscription->fresh()->payment_status);
 
         $service->delete($paiement->fresh());
-        $this->assertSame(PaymentStatus::Impaye, $challenge->fresh()->payment_status);
+        $this->assertSame(PaymentStatus::Impaye, $inscription->fresh()->payment_status);
     }
 
     #[Test]
@@ -90,14 +101,10 @@ class PaymentAndReceiptManagementTest extends TestCase
         Carbon::setTestNow(Carbon::parse('2026-08-11 10:00:00'));
 
         $manager = $this->manager();
-        $challenge = Challenge::factory()->create(['price' => 30000]);
-        $paiement = app(PaymentService::class)->create([
-            'challenge_id' => $challenge->id,
-            'amount' => 10000,
-            'type' => PaymentType::Paiement->value,
-            'payment_date' => '2026-08-11',
+        $inscription = Inscription::factory()->create(['price' => 30000]);
+        $paiement = app(PaymentService::class)->create($this->paymentPayload($inscription, [
             'payment_mode' => PaymentMode::MobileMoney->value,
-        ], $manager->id);
+        ]), $manager->id);
 
         $this->actingAs($manager)
             ->post(route('payments.recu.store', $paiement))
@@ -115,7 +122,6 @@ class PaymentAndReceiptManagementTest extends TestCase
             ->assertRedirect(route('recus.show', $firstReceipt));
 
         $this->assertSame(1, Recu::query()->count());
-
         Carbon::setTestNow();
     }
 
@@ -123,18 +129,17 @@ class PaymentAndReceiptManagementTest extends TestCase
     public function recu_est_telechargeable_en_pdf(): void
     {
         $manager = $this->manager();
-        $paiement = app(PaymentService::class)->create([
-            'challenge_id' => Challenge::factory()->create(['price' => 30000])->id,
-            'amount' => 30000,
-            'type' => PaymentType::Paiement->value,
-            'payment_date' => '2026-08-11',
-            'payment_mode' => PaymentMode::Virement->value,
-        ], $manager->id);
+        $paiement = app(PaymentService::class)->create($this->paymentPayload(
+            Inscription::factory()->create(['price' => 30000]),
+            [
+                'amount' => 30000,
+                'payment_mode' => PaymentMode::Virement->value,
+            ],
+        ), $manager->id);
 
         $this->actingAs($manager)->post(route('payments.recu.store', $paiement));
 
         $recu = Recu::query()->firstOrFail();
-
         $response = $this->actingAs($manager)->get(route('recus.pdf', $recu));
 
         $response->assertOk();
@@ -174,5 +179,16 @@ class PaymentAndReceiptManagementTest extends TestCase
         $manager->assignRole('manager');
 
         return $manager;
+    }
+
+    private function paymentPayload(Inscription $inscription, array $overrides = []): array
+    {
+        return $overrides + [
+            'inscription_id' => $inscription->id,
+            'amount' => 10000,
+            'type' => PaymentType::Paiement->value,
+            'payment_date' => '2026-08-11',
+            'payment_mode' => PaymentMode::Especes->value,
+        ];
     }
 }

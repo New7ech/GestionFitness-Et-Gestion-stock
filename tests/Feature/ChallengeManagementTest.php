@@ -2,13 +2,12 @@
 
 namespace Tests\Feature;
 
-use App\Enums\ChallengeStatus;
 use App\Enums\PaymentMode;
 use App\Enums\PaymentType;
 use App\Models\Challenge;
 use App\Models\ChallengeType;
+use App\Models\Inscription;
 use App\Models\Paiement;
-use App\Models\Participante;
 use App\Models\User;
 use Database\Seeders\FitnessReferenceSeeder;
 use Database\Seeders\ImproveRolesAndPermissionsSeeder;
@@ -31,45 +30,35 @@ class ChallengeManagementTest extends TestCase
     }
 
     #[Test]
-    public function manager_peut_creer_un_challenge_avec_date_de_fin_calculee(): void
+    public function manager_peut_creer_une_session_sans_participante_avec_date_de_fin_calculee(): void
     {
         $manager = $this->manager();
-        $participante = Participante::factory()->create();
         $challengeType = ChallengeType::query()->where('code', 'perte_de_poids')->firstOrFail();
 
         $response = $this->actingAs($manager)->post(route('challenges.store'), [
-            'participante_id' => $participante->id,
             'challenge_type_id' => $challengeType->id,
             'start_date' => '2026-08-10',
             'duration_days' => 15,
-            'status' => 'planifie',
-            'price' => 30000,
-            'goal_weight' => 70,
-            'goal_waist' => 85,
         ]);
 
         $challenge = Challenge::query()->firstOrFail();
 
         $response->assertRedirect(route('challenges.show', $challenge));
         $this->assertSame('2026-08-25', $challenge->end_date->toDateString());
-        $this->assertSame(ChallengeStatus::Planifie, $challenge->status);
         $this->assertSame($manager->id, $challenge->created_by);
+        $this->assertSame(0, $challenge->inscriptions()->count());
     }
 
     #[Test]
-    public function duree_du_challenge_est_validee_depuis_la_config(): void
+    public function duree_de_la_session_est_validee_depuis_la_config(): void
     {
         $manager = $this->manager();
-        $participante = Participante::factory()->create();
         $challengeType = ChallengeType::query()->where('code', 'perte_de_poids')->firstOrFail();
 
         $response = $this->actingAs($manager)->post(route('challenges.store'), [
-            'participante_id' => $participante->id,
             'challenge_type_id' => $challengeType->id,
             'start_date' => '2026-08-10',
             'duration_days' => 14,
-            'status' => 'planifie',
-            'price' => 30000,
         ]);
 
         $response->assertSessionHasErrors('duration_days');
@@ -77,7 +66,7 @@ class ChallengeManagementTest extends TestCase
     }
 
     #[Test]
-    public function coach_ne_peut_pas_creer_de_challenge(): void
+    public function coach_ne_peut_pas_creer_de_session(): void
     {
         $coach = User::factory()->create();
         $coach->assignRole('coach');
@@ -87,47 +76,41 @@ class ChallengeManagementTest extends TestCase
     }
 
     #[Test]
-    public function participante_peut_afficher_plusieurs_challenges_dans_son_historique(): void
+    public function manager_peut_modifier_le_planning_d_une_session_vide(): void
     {
         $manager = $this->manager();
-        $participante = Participante::factory()->create([
-            'first_name' => 'Aminata',
-            'last_name' => 'Diallo',
-        ]);
-        $challengeType = ChallengeType::query()->where('code', 'diastasis')->firstOrFail();
-
-        Challenge::factory()->create([
-            'participante_id' => $participante->id,
-            'challenge_type_id' => $challengeType->id,
-            'start_date' => '2026-08-01',
+        $challenge = $this->challenge([
+            'start_date' => '2026-08-10',
             'duration_days' => 15,
         ]);
-        Challenge::factory()->create([
-            'participante_id' => $participante->id,
-            'challenge_type_id' => $challengeType->id,
-            'start_date' => '2026-09-01',
-            'duration_days' => 30,
-        ]);
 
-        $response = $this->actingAs($manager)->get(route('participantes.show', $participante));
+        $this->actingAs($manager)
+            ->put(route('challenges.update', $challenge), $this->sessionPayload($challenge, [
+                'start_date' => '2026-08-12',
+                'duration_days' => 30,
+            ]))
+            ->assertRedirect(route('challenges.show', $challenge));
 
-        $response->assertOk();
-        $response->assertSee('15 jours');
-        $response->assertSee('30 jours');
-        $this->assertCount(2, $participante->fresh()->challenges);
+        $challenge->refresh();
+        $this->assertSame('2026-08-12', $challenge->start_date->toDateString());
+        $this->assertSame('2026-09-11', $challenge->end_date->toDateString());
+        $this->assertSame($manager->id, $challenge->updated_by);
     }
 
     #[Test]
     public function changement_de_planning_avec_historique_demande_confirmation(): void
     {
         $manager = $this->manager();
-        $challenge = Challenge::factory()->create([
+        $challenge = $this->challenge([
             'start_date' => '2026-08-10',
             'duration_days' => 15,
-            'price' => 30000,
+        ]);
+        $inscription = Inscription::factory()->create([
+            'challenge_id' => $challenge->id,
+            'created_by' => $manager->id,
         ]);
         Paiement::query()->create([
-            'challenge_id' => $challenge->id,
+            'inscription_id' => $inscription->id,
             'amount' => 10000,
             'type' => PaymentType::Paiement,
             'payment_date' => '2026-08-10',
@@ -135,14 +118,7 @@ class ChallengeManagementTest extends TestCase
             'recorded_by' => $manager->id,
         ]);
 
-        $payload = [
-            'participante_id' => $challenge->participante_id,
-            'challenge_type_id' => $challenge->challenge_type_id,
-            'start_date' => '2026-08-10',
-            'duration_days' => 30,
-            'status' => $challenge->status->value,
-            'price' => 30000,
-        ];
+        $payload = $this->sessionPayload($challenge, ['duration_days' => 30]);
 
         $this->actingAs($manager)
             ->put(route('challenges.update', $challenge), $payload)
@@ -159,20 +135,31 @@ class ChallengeManagementTest extends TestCase
     }
 
     #[Test]
-    public function manager_peut_changer_le_statut_du_challenge(): void
+    public function manager_peut_supprimer_une_session_sans_inscription(): void
     {
         $manager = $this->manager();
-        $challenge = Challenge::factory()->create([
-            'status' => ChallengeStatus::Planifie,
-        ]);
+        $challenge = $this->challenge();
 
         $this->actingAs($manager)
-            ->patch(route('challenges.status', $challenge), [
-                'status' => 'en_cours',
-            ])
-            ->assertRedirect();
+            ->delete(route('challenges.destroy', $challenge))
+            ->assertRedirect(route('challenges.index'));
 
-        $this->assertSame(ChallengeStatus::EnCours, $challenge->fresh()->status);
+        $this->assertSoftDeleted('challenges', ['id' => $challenge->id]);
+    }
+
+    #[Test]
+    public function une_session_avec_inscription_meme_vide_ne_peut_pas_etre_supprimee(): void
+    {
+        $manager = $this->manager();
+        $challenge = $this->challenge();
+        Inscription::factory()->create(['challenge_id' => $challenge->id]);
+
+        $this->actingAs($manager)
+            ->delete(route('challenges.destroy', $challenge))
+            ->assertRedirect(route('challenges.show', $challenge))
+            ->assertSessionHas('error');
+
+        $this->assertDatabaseHas('challenges', ['id' => $challenge->id, 'deleted_at' => null]);
     }
 
     private function manager(): User
@@ -181,5 +168,19 @@ class ChallengeManagementTest extends TestCase
         $manager->assignRole('manager');
 
         return $manager;
+    }
+
+    private function challenge(array $attributes = []): Challenge
+    {
+        return Challenge::factory()->create($attributes);
+    }
+
+    private function sessionPayload(Challenge $challenge, array $overrides = []): array
+    {
+        return $overrides + [
+            'challenge_type_id' => $challenge->challenge_type_id,
+            'start_date' => $challenge->start_date->toDateString(),
+            'duration_days' => $challenge->duration_days,
+        ];
     }
 }

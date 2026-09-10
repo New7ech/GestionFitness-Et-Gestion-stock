@@ -23,6 +23,8 @@ class FitnessRolesAndPermissionsTest extends TestCase
 
         $this->assertSame(1, Role::query()->where('name', 'coach')->count());
         $this->assertSame(1, Permission::query()->where('name', 'show-participantes')->count());
+        $this->assertSame(1, Permission::query()->where('name', 'show-inscriptions')->count());
+        $this->assertSame(1, Permission::query()->where('name', 'create-inscriptions')->count());
         $this->assertSame(1, Permission::query()->where('name', 'generate-recus')->count());
     }
 
@@ -37,6 +39,11 @@ class FitnessRolesAndPermissionsTest extends TestCase
 
         $fitnessPermissions = [
             'show-participantes',
+            'show-inscriptions',
+            'create-inscriptions',
+            'edit-inscriptions',
+            'delete-inscriptions',
+            'change-inscription-status',
             'generate-recus',
             'delete-measurements',
             'view-activity-log',
@@ -60,6 +67,7 @@ class FitnessRolesAndPermissionsTest extends TestCase
             'show-participantes',
             'view-participante-health-data',
             'show-challenges',
+            'show-inscriptions',
             'record-attendance',
             'edit-attendance',
             'record-measurements',
@@ -73,6 +81,7 @@ class FitnessRolesAndPermissionsTest extends TestCase
 
         foreach ([
             'create-participantes',
+            'create-inscriptions',
             'show-payments',
             'create-payments',
             'delete-measurements',

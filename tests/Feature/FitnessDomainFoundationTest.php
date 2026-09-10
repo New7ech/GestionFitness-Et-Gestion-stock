@@ -13,6 +13,7 @@ use App\Enums\PaymentType;
 use App\Models\Challenge;
 use App\Models\ChallengeType;
 use App\Models\Commentaire;
+use App\Models\Inscription;
 use App\Models\MeasurementType;
 use App\Models\MeasurementValue;
 use App\Models\Media;
@@ -41,13 +42,11 @@ class FitnessDomainFoundationTest extends TestCase
             'label' => 'Perte de poids',
             'is_active' => true,
         ]);
-
         $this->assertDatabaseHas('challenge_types', [
             'code' => 'diastasis',
             'label' => 'Rééducation de la diastasie',
             'is_active' => true,
         ]);
-
         $this->assertDatabaseHas('measurement_types', [
             'code' => 'hanches',
             'label' => 'Hanches',
@@ -68,35 +67,40 @@ class FitnessDomainFoundationTest extends TestCase
         $challenge->refresh();
 
         $this->assertSame('2026-08-25', $challenge->end_date->toDateString());
-        $this->assertInstanceOf(ChallengeStatus::class, $challenge->status);
-        $this->assertSame(ChallengeStatus::Planifie, $challenge->status);
-        $this->assertSame(PaymentStatus::Impaye, $challenge->payment_status);
+        $this->assertNotNull($challenge->challengeType);
     }
 
     #[Test]
-    public function participante_peut_avoir_plusieurs_challenges(): void
+    public function participante_peut_avoir_plusieurs_sessions_via_ses_inscriptions(): void
     {
         $participante = Participante::factory()->create();
         $challengeType = ChallengeType::factory()->create();
-
         $firstChallenge = Challenge::factory()->create([
-            'participante_id' => $participante->id,
             'challenge_type_id' => $challengeType->id,
             'duration_days' => 15,
         ]);
-
         $secondChallenge = Challenge::factory()->create([
-            'participante_id' => $participante->id,
             'challenge_type_id' => $challengeType->id,
             'duration_days' => 30,
         ]);
 
-        $participante->load('challenges');
+        $firstInscription = Inscription::factory()->create([
+            'participante_id' => $participante->id,
+            'challenge_id' => $firstChallenge->id,
+        ]);
+        $secondInscription = Inscription::factory()->create([
+            'participante_id' => $participante->id,
+            'challenge_id' => $secondChallenge->id,
+        ]);
+
+        $participante->load(['inscriptions', 'challenges']);
         $challengeType->load('challenges');
 
+        $this->assertCount(2, $participante->inscriptions);
         $this->assertCount(2, $participante->challenges);
-        $this->assertTrue($firstChallenge->participante->is($participante));
-        $this->assertTrue($secondChallenge->participante->is($participante));
+        $this->assertTrue($firstInscription->challenge->is($firstChallenge));
+        $this->assertTrue($secondInscription->challenge->is($secondChallenge));
+        $this->assertTrue($firstChallenge->participantes->contains($participante));
         $this->assertTrue($challengeType->challenges->contains($firstChallenge));
         $this->assertTrue($challengeType->challenges->contains($secondChallenge));
     }
@@ -106,36 +110,36 @@ class FitnessDomainFoundationTest extends TestCase
     {
         $participante = Participante::factory()->create();
         $measurementType = MeasurementType::factory()->create();
-        $challenge = Challenge::factory()->create([
-            'participante_id' => $participante->id,
-        ]);
+        $inscription = Inscription::factory()->create(['participante_id' => $participante->id]);
 
         $this->assertInstanceOf(ParticipantStatus::class, $participante->status);
         $this->assertSame(ParticipantStatus::Active, $participante->status);
         $this->assertTrue($measurementType->is_active);
-        $this->assertNotNull($challenge->challengeType);
-        $this->assertNotNull($challenge->end_date);
+        $this->assertNotNull($inscription->challenge);
+        $this->assertInstanceOf(ChallengeStatus::class, $inscription->status);
+        $this->assertSame(PaymentStatus::Impaye, $inscription->payment_status);
     }
 
     #[Test]
-    public function relations_historiques_fitness_sont_operationnelles(): void
+    public function relations_historiques_fitness_sont_rattachees_a_l_inscription(): void
     {
         $user = User::factory()->create();
         $participante = Participante::factory()->create(['created_by' => $user->id]);
-        $challenge = Challenge::factory()->create([
+        $challenge = Challenge::factory()->create(['created_by' => $user->id]);
+        $inscription = Inscription::factory()->create([
             'participante_id' => $participante->id,
+            'challenge_id' => $challenge->id,
             'created_by' => $user->id,
         ]);
 
         $paiement = Paiement::query()->create([
-            'challenge_id' => $challenge->id,
+            'inscription_id' => $inscription->id,
             'amount' => 10000,
             'type' => PaymentType::Paiement,
             'payment_date' => '2026-08-10',
             'payment_mode' => PaymentMode::Especes,
             'recorded_by' => $user->id,
         ]);
-
         $recu = Recu::query()->create([
             'payment_id' => $paiement->id,
             'receipt_number' => 'REC-2026-0001',
@@ -149,58 +153,57 @@ class FitnessDomainFoundationTest extends TestCase
             'issued_by_name' => $user->name,
             'generated_by' => $user->id,
         ]);
-
         $mesure = Mesure::query()->create([
-            'challenge_id' => $challenge->id,
+            'inscription_id' => $inscription->id,
             'measured_at' => '2026-08-10',
             'stage' => MeasurementStage::Initiale,
             'weight' => 80,
             'waist' => 95,
             'recorded_by' => $user->id,
         ]);
-
         $measurementType = MeasurementType::factory()->create();
         $measurementValue = MeasurementValue::query()->create([
             'mesure_id' => $mesure->id,
             'measurement_type_id' => $measurementType->id,
             'value' => 101,
         ]);
-
         $presence = Presence::query()->create([
-            'challenge_id' => $challenge->id,
+            'inscription_id' => $inscription->id,
             'attendance_date' => '2026-08-10',
             'status' => AttendanceStatus::Presente,
             'recorded_by' => $user->id,
         ]);
-
         $media = Media::query()->create([
-            'mediable_type' => Mesure::class,
-            'mediable_id' => $mesure->id,
+            'mediable_type' => Inscription::class,
+            'mediable_id' => $inscription->id,
             'type' => MediaType::Photo,
             'stage' => MeasurementStage::Initiale,
-            'disk_path' => 'participantes/1/challenges/1/photo.jpg',
+            'disk_path' => 'participantes/1/inscriptions/1/photo.jpg',
             'original_filename' => 'photo.jpg',
             'mime_type' => 'image/jpeg',
             'size_bytes' => 1024,
             'uploaded_by' => $user->id,
         ]);
-
         $commentaire = Commentaire::query()->create([
-            'commentable_type' => Participante::class,
-            'commentable_id' => $participante->id,
+            'commentable_type' => Inscription::class,
+            'commentable_id' => $inscription->id,
             'body' => 'Suivi initial.',
             'created_by' => $user->id,
         ]);
 
-        $this->assertTrue($paiement->challenge->is($challenge));
+        $this->assertTrue($paiement->inscription->is($inscription));
         $this->assertTrue($paiement->recu->is($recu));
         $this->assertTrue($recu->paiement->is($paiement));
-        $this->assertTrue($mesure->challenge->is($challenge));
+        $this->assertTrue($mesure->inscription->is($inscription));
         $this->assertTrue($mesure->values->contains($measurementValue));
         $this->assertTrue($measurementValue->measurementType->is($measurementType));
-        $this->assertTrue($presence->challenge->is($challenge));
-        $this->assertTrue($media->mediable->is($mesure));
-        $this->assertTrue($commentaire->commentable->is($participante));
-        $this->assertTrue($challenge->recus->contains($recu));
+        $this->assertTrue($presence->inscription->is($inscription));
+        $this->assertTrue($media->mediable->is($inscription));
+        $this->assertTrue($commentaire->commentable->is($inscription));
+        $this->assertTrue($inscription->paiements->contains($paiement));
+        $this->assertTrue($inscription->mesures->contains($mesure));
+        $this->assertTrue($inscription->presences->contains($presence));
+        $this->assertTrue($inscription->media->contains($media));
+        $this->assertTrue($inscription->commentaires->contains($commentaire));
     }
 }
