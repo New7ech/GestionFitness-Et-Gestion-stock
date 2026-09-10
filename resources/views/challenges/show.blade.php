@@ -41,11 +41,21 @@
         <div class="card-header"><h4 class="card-title">Participantes inscrites ({{ $challenge->inscriptions->count() }})</h4></div>
         <div class="card-body p-0">
             @forelse ($challenge->inscriptions as $inscription)
-                @if ($loop->first)<div class="table-responsive"><table class="table table-striped mb-0"><thead><tr><th>Participante</th><th>Statut</th><th>Prix</th><th>Paiement</th><th>Suivi</th><th></th></tr></thead><tbody>@endif
+                @if ($loop->first)<div class="table-responsive"><table class="table table-striped mb-0"><thead><tr><th>Participante</th><th>Statut</th><th>Prix</th><th>Solde</th><th>Paiement</th><th>Suivi</th><th></th></tr></thead><tbody>@endif
                     <tr>
+                        @php
+                            $paidAmount = $inscription->paiements
+                                ->filter(fn ($paiement) => $paiement->type === \App\Enums\PaymentType::Paiement)
+                                ->sum('amount');
+                            $refundedAmount = $inscription->paiements
+                                ->filter(fn ($paiement) => $paiement->type === \App\Enums\PaymentType::Remboursement)
+                                ->sum('amount');
+                            $remainingAmount = max(0, (float) $inscription->price - $paidAmount + $refundedAmount);
+                        @endphp
                         <td>{{ $inscription->participante->full_name }}</td>
                         <td>{{ $inscription->status->label() }}</td>
                         <td>{{ number_format((float) $inscription->price, 0, ',', ' ') }} FCFA</td>
+                        <td>{{ number_format($remainingAmount, 0, ',', ' ') }} FCFA</td>
                         <td>{{ $inscription->payment_status->label() }}</td>
                         <td>{{ $inscription->paiements->count() }} paiement(s), {{ $inscription->presences->count() }} présence(s), {{ $inscription->mesures->count() }} mesure(s)</td>
                         <td><a href="{{ route('inscriptions.show', $inscription) }}" class="btn btn-link btn-primary"><i class="fa fa-eye"></i></a></td>

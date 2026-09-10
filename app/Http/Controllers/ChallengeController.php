@@ -24,7 +24,16 @@ class ChallengeController extends Controller
             ->withCount('inscriptions')
             ->when($request->filled('q'), function ($query) use ($request): void {
                 $term = $request->string('q')->toString();
-                $query->whereHas('challengeType', fn ($typeQuery) => $typeQuery->where('label', 'like', "%{$term}%"));
+                $query->where(function ($searchQuery) use ($term): void {
+                    $searchQuery
+                        ->whereHas('challengeType', fn ($typeQuery) => $typeQuery->where('label', 'like', "%{$term}%"))
+                        ->orWhereHas('inscriptions.participante', function ($participanteQuery) use ($term): void {
+                            $participanteQuery
+                                ->where('first_name', 'like', "%{$term}%")
+                                ->orWhere('last_name', 'like', "%{$term}%")
+                                ->orWhere('phone', 'like', "%{$term}%");
+                        });
+                });
             })
             ->when($request->filled('challenge_type_id'), fn ($query) => $query->where('challenge_type_id', $request->integer('challenge_type_id')))
             ->latest()

@@ -24,7 +24,7 @@
             <form method="GET" action="{{ route('challenges.index') }}" class="row g-3 align-items-end mb-4">
                 <div class="col-md-4">
                     <label for="q" class="form-label">Recherche</label>
-                    <input type="text" name="q" id="q" class="form-control" value="{{ request('q') }}" placeholder="Type de challenge">
+                    <input type="text" name="q" id="q" class="form-control" value="{{ request('q') }}" placeholder="Type ou participante">
                 </div>
                 <div class="col-md-4">
                     <label for="challenge_type_id" class="form-label">Type</label>
