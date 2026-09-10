@@ -31,9 +31,4 @@ class ChallengePolicy
     {
         return $user->can('delete-challenges');
     }
-
-    public function changeStatus(User $user, Challenge $challenge): bool
-    {
-        return $user->can('change-challenge-status');
-    }
 }

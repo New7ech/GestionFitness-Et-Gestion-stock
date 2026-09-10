@@ -3,6 +3,7 @@
 
     $isFitness = str_starts_with($route, 'participantes')
         || str_starts_with($route, 'challenges')
+        || str_starts_with($route, 'inscriptions')
         || str_starts_with($route, 'presences')
         || str_starts_with($route, 'mesures')
         || str_starts_with($route, 'participant-media')
@@ -56,6 +57,14 @@
                                         </a>
                                     </li>
                                 @endcan
+                                @can('show-inscriptions')
+                                    <li class="{{ str_starts_with($route, 'inscriptions') ? 'active' : '' }}">
+                                        <a href="{{ route('inscriptions.index') }}">
+                                            <i class="fas fa-user-check"></i>
+                                            <p>Inscriptions</p>
+                                        </a>
+                                    </li>
+                                @endcan
                                 @can('record-measurements')
                                     <li class="{{ str_starts_with($route, 'mesures') ? 'active' : '' }}">
                                         <a href="{{ route('mesures.index') }}">
@@ -96,9 +105,9 @@
                                         </a>
                                     </li>
                                 @endcan
-                                @can('create-participantes')
-                                    <li class="{{ $route === 'participantes.create' ? 'active' : '' }}">
-                                        <a href="{{ route('participantes.create') }}">
+                                @can('create-inscriptions')
+                                    <li class="{{ $route === 'inscriptions.create' ? 'active' : '' }}">
+                                        <a href="{{ route('inscriptions.create') }}">
                                             <i class="fas fa-user-plus"></i>
                                             <p>Inscription</p>
                                         </a>

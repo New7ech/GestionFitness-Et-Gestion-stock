@@ -3,6 +3,7 @@
 namespace App\Providers;
 
 use App\Models\Challenge;
+use App\Models\Inscription;
 use App\Models\Media;
 use App\Models\Mesure;
 use App\Models\Paiement;
@@ -10,6 +11,7 @@ use App\Models\Participante;
 use App\Models\Presence;
 use App\Models\Recu;
 use App\Policies\ChallengePolicy;
+use App\Policies\InscriptionPolicy;
 use App\Policies\MediaPolicy;
 use App\Policies\MesurePolicy;
 use App\Policies\PaiementPolicy;
@@ -31,6 +33,7 @@ class AppServiceProvider extends ServiceProvider
     {
         Builder::defaultStringLength(191);
         Gate::policy(Challenge::class, ChallengePolicy::class);
+        Gate::policy(Inscription::class, InscriptionPolicy::class);
         Gate::policy(Media::class, MediaPolicy::class);
         Gate::policy(Mesure::class, MesurePolicy::class);
         Gate::policy(Paiement::class, PaiementPolicy::class);

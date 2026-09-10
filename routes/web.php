@@ -3,6 +3,7 @@
 use App\Http\Controllers\AccueilController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\ChallengeController;
+use App\Http\Controllers\InscriptionController;
 use App\Http\Controllers\MediaController;
 use App\Http\Controllers\MesureController;
 use App\Http\Controllers\NotificationController;
@@ -44,12 +45,13 @@ Route::middleware(['auth'])->group(function () {
     // Fitness
     Route::get('/participantes/{participante}/photo', [ParticipanteController::class, 'photo'])->name('participantes.photo');
     Route::resource('participantes', ParticipanteController::class);
-    Route::patch('/challenges/{challenge}/status', [ChallengeController::class, 'changeStatus'])->name('challenges.status');
     Route::resource('challenges', ChallengeController::class);
+    Route::patch('/inscriptions/{inscription}/status', [InscriptionController::class, 'changeStatus'])->name('inscriptions.status');
+    Route::resource('inscriptions', InscriptionController::class);
     Route::resource('presences', PresenceController::class)->except(['destroy']);
     Route::resource('mesures', MesureController::class);
     Route::get('/participant-media', [ParticipantMediaController::class, 'index'])->name('participant-media.index');
-    Route::post('/challenges/{challenge}/media', [ParticipantMediaController::class, 'store'])->name('challenges.media.store');
+    Route::post('/inscriptions/{inscription}/media', [ParticipantMediaController::class, 'store'])->name('inscriptions.media.store');
     Route::get('/participant-media/{media}', [ParticipantMediaController::class, 'show'])->name('participant-media.show');
     Route::delete('/participant-media/{media}', [ParticipantMediaController::class, 'destroy'])->name('participant-media.destroy');
     Route::post('/payments/{paiement}/recu', [RecuController::class, 'store'])->name('payments.recu.store');
