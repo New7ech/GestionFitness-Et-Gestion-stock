@@ -23,6 +23,11 @@
                 @can('create', \App\Models\Inscription::class)
                     <a href="{{ route('inscriptions.create', ['challenge_id' => $challenge->id]) }}" class="btn btn-primary btn-round"><i class="fa fa-user-plus"></i> Inscrire une participante</a>
                 @endcan
+                @can('create', \App\Models\Presence::class)
+                    @if($challenge->inscriptions->isNotEmpty())
+                        <a href="{{ route('presences.bulk.create', ['challenge_id' => $challenge->id]) }}" class="btn btn-label-info btn-round"><i class="fa fa-calendar-check"></i> Pointer les présences</a>
+                    @endif
+                @endcan
                 @can('update', $challenge)<a href="{{ route('challenges.edit', $challenge) }}" class="btn btn-warning btn-round">Modifier</a>@endcan
             </div>
         </div>

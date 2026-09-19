@@ -48,6 +48,8 @@ Route::middleware(['auth'])->group(function () {
     Route::resource('challenges', ChallengeController::class);
     Route::patch('/inscriptions/{inscription}/status', [InscriptionController::class, 'changeStatus'])->name('inscriptions.status');
     Route::resource('inscriptions', InscriptionController::class);
+    Route::get('/presences/pointage', [PresenceController::class, 'bulkCreate'])->name('presences.bulk.create');
+    Route::post('/presences/pointage', [PresenceController::class, 'bulkStore'])->name('presences.bulk.store');
     Route::resource('presences', PresenceController::class)->except(['destroy']);
     Route::resource('mesures', MesureController::class);
     Route::get('/participant-media', [ParticipantMediaController::class, 'index'])->name('participant-media.index');
