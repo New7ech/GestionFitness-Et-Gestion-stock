@@ -26,8 +26,8 @@
                 </a>
             @endcan
             @can('record-attendance')
-                <a href="{{ route('presences.create') }}" class="btn btn-label-info btn-round me-2">
-                    <i class="fas fa-calendar-check me-1"></i> Presence
+                <a href="{{ route('presences.bulk.create') }}" class="btn btn-label-info btn-round me-2">
+                    <i class="fas fa-calendar-check me-1"></i> Pointer les présences
                 </a>
             @endcan
             @can('create-payments')
@@ -50,27 +50,7 @@
                         </div>
                         <div class="col col-stats ms-3 ms-sm-0">
                             <div class="numbers">
-                                <p class="card-category">Participantes actives</p>
-                                <h4 class="card-title">{{ number_format($participantesActives, 0, ',', ' ') }}</h4>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-sm-6 col-md-3">
-            <div class="card card-stats card-round">
-                <div class="card-body">
-                    <div class="row align-items-center">
-                        <div class="col-icon">
-                            <div class="icon-big text-center icon-success bubble-shadow-small">
-                                <i class="fas fa-dumbbell"></i>
-                            </div>
-                        </div>
-                        <div class="col col-stats ms-3 ms-sm-0">
-                            <div class="numbers">
-                                <p class="card-category">Inscriptions en cours</p>
+                                <p class="card-category">Inscriptions actives</p>
                                 <h4 class="card-title">{{ number_format($challengesEnCours, 0, ',', ' ') }}</h4>
                             </div>
                         </div>
@@ -84,14 +64,36 @@
                 <div class="card-body">
                     <div class="row align-items-center">
                         <div class="col-icon">
-                            <div class="icon-big text-center icon-info bubble-shadow-small">
-                                <i class="fas fa-cash-register"></i>
+                            <div class="icon-big text-center icon-success bubble-shadow-small">
+                                <i class="fas fa-calendar-plus"></i>
                             </div>
                         </div>
                         <div class="col col-stats ms-3 ms-sm-0">
                             <div class="numbers">
-                                <p class="card-category">CA du mois</p>
-                                <h4 class="card-title">{{ number_format($chiffreAffairesMois, 0, ',', ' ') }} FCFA</h4>
+                                <p class="card-category">Démarrages ce mois</p>
+                                <h4 class="card-title">{{ number_format($demarragesMois, 0, ',', ' ') }}</h4>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-sm-6 col-md-3">
+            <div class="card card-stats card-round">
+                <div class="card-body">
+                    <div class="row align-items-center">
+                        <div class="col-icon">
+                            <div class="icon-big text-center icon-info bubble-shadow-small">
+                                <i class="fas fa-calendar-check"></i>
+                            </div>
+                        </div>
+                        <div class="col col-stats ms-3 ms-sm-0">
+                            <div class="numbers">
+                                <p class="card-category">Taux de présence enregistré</p>
+                                <h4 class="card-title">
+                                    {{ $tauxPresenceEnregistre === null ? '—' : number_format($tauxPresenceEnregistre, 1, ',', ' ') . ' %' }}
+                                </h4>
                             </div>
                         </div>
                     </div>
@@ -105,13 +107,96 @@
                     <div class="row align-items-center">
                         <div class="col-icon">
                             <div class="icon-big text-center icon-warning bubble-shadow-small">
-                                <i class="fas fa-calendar-day"></i>
+                                <i class="fas fa-cash-register"></i>
                             </div>
                         </div>
                         <div class="col col-stats ms-3 ms-sm-0">
                             <div class="numbers">
-                                <p class="card-category">Presences du jour</p>
-                                <h4 class="card-title">{{ number_format($presencesDuJour, 0, ',', ' ') }}</h4>
+                                <p class="card-category">CA net encaissé</p>
+                                <h4 class="card-title">{{ number_format($chiffreAffairesEncaisse, 0, ',', ' ') }} FCFA</h4>
+                                <small class="text-muted">Ce mois : {{ number_format($chiffreAffairesMois, 0, ',', ' ') }} FCFA</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-sm-6 col-md-3">
+            <div class="card card-stats card-round">
+                <div class="card-body">
+                    <div class="row align-items-center">
+                        <div class="col-icon">
+                            <div class="icon-big text-center icon-danger bubble-shadow-small">
+                                <i class="fas fa-hand-holding-usd"></i>
+                            </div>
+                        </div>
+                        <div class="col col-stats ms-3 ms-sm-0">
+                            <div class="numbers">
+                                <p class="card-category">Reste à percevoir</p>
+                                <h4 class="card-title">{{ number_format($resteAPercevoir, 0, ',', ' ') }} FCFA</h4>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-sm-6 col-md-3">
+            <div class="card card-stats card-round">
+                <div class="card-body">
+                    <div class="row align-items-center">
+                        <div class="col-icon">
+                            <div class="icon-big text-center icon-warning bubble-shadow-small">
+                                <i class="fas fa-hourglass-half"></i>
+                            </div>
+                        </div>
+                        <div class="col col-stats ms-3 ms-sm-0">
+                            <div class="numbers">
+                                <p class="card-category">À clôturer sous 7 jours</p>
+                                <h4 class="card-title">{{ number_format($challengesACloturerTotal, 0, ',', ' ') }}</h4>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-sm-6 col-md-3">
+            <div class="card card-stats card-round">
+                <div class="card-body">
+                    <div class="row align-items-center">
+                        <div class="col-icon">
+                            <div class="icon-big text-center icon-info bubble-shadow-small">
+                                <i class="fas fa-calendar-alt"></i>
+                            </div>
+                        </div>
+                        <div class="col col-stats ms-3 ms-sm-0">
+                            <div class="numbers">
+                                <p class="card-category">CA net du 1 au 14</p>
+                                <h4 class="card-title">{{ number_format($caPremiereQuinzaine, 0, ',', ' ') }} FCFA</h4>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-sm-6 col-md-3">
+            <div class="card card-stats card-round">
+                <div class="card-body">
+                    <div class="row align-items-center">
+                        <div class="col-icon">
+                            <div class="icon-big text-center icon-secondary bubble-shadow-small">
+                                <i class="fas fa-calendar-week"></i>
+                            </div>
+                        </div>
+                        <div class="col col-stats ms-3 ms-sm-0">
+                            <div class="numbers">
+                                <p class="card-category">CA net du 15 à la fin</p>
+                                <h4 class="card-title">{{ number_format($caSecondeQuinzaine, 0, ',', ' ') }} FCFA</h4>
                             </div>
                         </div>
                     </div>
@@ -137,11 +222,60 @@
         <div class="col-md-4">
             <div class="card card-round">
                 <div class="card-header">
-                    <div class="card-title">Challenges par type</div>
+                    <div class="card-title">Inscriptions par programme</div>
                 </div>
                 <div class="card-body">
                     <div class="chart-container" style="height: 330px">
                         <canvas id="challengesParTypeChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card card-round">
+                <div class="card-header">
+                    <div class="card-title">Répartition par programme</div>
+                    <div class="card-category">
+                        Les montants sont nets des remboursements. Les démarrages et encaissements sont ventilés entre le 1–14 et le 15–fin du mois.
+                    </div>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-items-center mb-0">
+                            <thead class="thead-light">
+                                <tr>
+                                    <th>Programme</th>
+                                    <th class="text-center">Inscriptions</th>
+                                    <th class="text-end">CA net encaissé</th>
+                                    <th class="text-end">Reste à percevoir</th>
+                                    <th class="text-end">CA 1–14</th>
+                                    <th class="text-end">CA 15–fin</th>
+                                    <th class="text-center">Dém. 1–14</th>
+                                    <th class="text-center">Dém. 15–fin</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @forelse($programDistribution as $program)
+                                    <tr>
+                                        <td class="fw-bold">{{ $program['label'] }}</td>
+                                        <td class="text-center">{{ number_format($program['inscriptions_count'], 0, ',', ' ') }}</td>
+                                        <td class="text-end">{{ number_format($program['net_collected'], 0, ',', ' ') }} FCFA</td>
+                                        <td class="text-end">{{ number_format($program['outstanding'], 0, ',', ' ') }} FCFA</td>
+                                        <td class="text-end">{{ number_format($program['collected_first_half'], 0, ',', ' ') }} FCFA</td>
+                                        <td class="text-end">{{ number_format($program['collected_second_half'], 0, ',', ' ') }} FCFA</td>
+                                        <td class="text-center">{{ number_format($program['starts_first_half'], 0, ',', ' ') }}</td>
+                                        <td class="text-center">{{ number_format($program['starts_second_half'], 0, ',', ' ') }}</td>
+                                    </tr>
+                                @empty
+                                    <tr>
+                                        <td colspan="8" class="text-center text-muted py-4">Aucun programme configuré.</td>
+                                    </tr>
+                                @endforelse
+                            </tbody>
+                        </table>
                     </div>
                 </div>
             </div>
@@ -182,6 +316,18 @@
                     <div class="d-flex justify-content-between align-items-center">
                         <span class="text-muted">Absentes</span>
                         <span class="badge badge-danger">{{ number_format($absentesDuJour, 0, ',', ' ') }}</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card card-round">
+                <div class="card-header">
+                    <div class="card-title">Suivi de progression</div>
+                </div>
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span class="text-muted">En retard de suivi (&gt; 35 jours)</span>
+                        <span class="badge badge-warning">{{ number_format($retardsDeSuivi, 0, ',', ' ') }}</span>
                     </div>
                 </div>
             </div>
@@ -387,8 +533,8 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     const challengesCanvas = document.getElementById('challengesParTypeChart');
-    const challengeLabels = @json($challengesParType->pluck('label'));
-    const challengeData = @json($challengesParType->pluck('total'));
+    const challengeLabels = @json($programDistribution->pluck('label'));
+    const challengeData = @json($programDistribution->pluck('inscriptions_count'));
     if (challengesCanvas && challengeLabels.length > 0) {
         new Chart(challengesCanvas, {
             type: 'doughnut',
