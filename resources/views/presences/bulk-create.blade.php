@@ -68,7 +68,7 @@
                 @else
                     <div class="alert alert-info d-flex align-items-start" role="alert">
                         <i class="fas fa-info-circle mt-1 me-2"></i>
-                        <div>
+                         <div>
                             <strong>Pointage rapide :</strong> toutes les participantes sont marquées <strong>présentes</strong> par défaut.
                             Basculez seulement les absences, puis enregistrez la feuille entière.
                         </div>
